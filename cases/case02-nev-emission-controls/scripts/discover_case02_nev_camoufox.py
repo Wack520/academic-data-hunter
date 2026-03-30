@@ -18,11 +18,10 @@ import argparse
 import contextlib
 import csv
 import json
+import logging
 import os
 import random
-import re
 import threading
-import time
 import tomllib
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -31,9 +30,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-import requests
-from bs4 import BeautifulSoup
 from camoufox.sync_api import Camoufox
+
+from tools.candidate_extractor import dedup, extract_candidates, score_domain_quality, score_search_result
+from tools.engines import get_engine, supported_engines
+from tools.fetcher import get_or_fetch_text
 
 ROOT = Path(__file__).resolve().parents[3]
 CASE_DIR = ROOT / "cases" / "case02-nev-emission-controls"
@@ -42,14 +43,7 @@ PANEL_PATH = DATA_DIR / "panel_case02_strict_30prov_2012_2023.csv"
 DEFAULT_OUT = CASE_DIR / "tmp" / "camoufox_nev_candidates_2023.json"
 DEFAULT_ADDON = ROOT / "addons" / "fp_obfuscator_lite"
 
-UA = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    )
-}
-
-SUPPORTED_ENGINES = ("sogou", "360", "bing", "google", "tavily")
+SUPPORTED_ENGINES = supported_engines()
 ENGINE_BONUS = {
     "google": 2,
     "tavily": 2,
@@ -58,91 +52,23 @@ ENGINE_BONUS = {
     "360": 1,
 }
 
-PROV_ALIAS = {
-    "内蒙古自治区": ["内蒙古", "全区", "我区"],
-    "吉林省": ["吉林", "全省", "我省"],
-    "山西省": ["山西", "全省", "我省"],
-    "新疆维吾尔自治区": ["新疆", "全区", "我区"],
-    "江苏省": ["江苏", "全省", "我省"],
-    "江西省": ["江西", "全省", "我省"],
-    "湖北省": ["湖北", "全省", "我省"],
-    "福建省": ["福建", "全省", "我省"],
-    "辽宁省": ["辽宁", "全省", "我省"],
-    "陕西省": ["陕西", "全省", "我省"],
-    "青海省": ["青海", "全省", "我省"],
-    "黑龙江省": ["黑龙江", "全省", "我省"],
-}
-
-PROV_URL_HINTS = {
-    "内蒙古自治区": ["nmg", "neimenggu"],
-    "吉林省": ["jilin", "jl.gov.cn"],
-    "山西省": ["shanxi", "sx.gov.cn"],
-    "新疆维吾尔自治区": ["xinjiang", "xj.gov.cn"],
-    "江苏省": ["jiangsu", "js.gov.cn", "zgjssw", "jszx"],
-    "江西省": ["jiangxi", "jx.gov.cn"],
-    "湖北省": ["hubei", "hb.gov.cn"],
-    "福建省": ["fujian", "fj.gov.cn"],
-    "辽宁省": ["liaoning", "ln.gov.cn"],
-    "陕西省": ["shaanxi", "sn.gov.cn", "sx.gov.cn"],
-    "青海省": ["qinghai", "qh.gov.cn"],
-    "黑龙江省": ["heilongjiang", "hlj.gov.cn"],
-}
-
-OTHER_PROV_HINTS = [
-    "北京",
-    "天津",
-    "河北",
-    "山西",
-    "内蒙古",
-    "辽宁",
-    "吉林",
-    "黑龙江",
-    "上海",
-    "江苏",
-    "浙江",
-    "安徽",
-    "福建",
-    "江西",
-    "山东",
-    "河南",
-    "湖北",
-    "湖南",
-    "广东",
-    "广西",
-    "海南",
-    "重庆",
-    "四川",
-    "贵州",
-    "云南",
-    "陕西",
-    "甘肃",
-    "青海",
-    "宁夏",
-    "新疆",
-]
-
-PAGE_TEXT_CACHE: dict[str, str] = {}
-PAGE_ERR_CACHE: dict[str, str] = {}
-PAGE_CACHE_LOCK = threading.Lock()
-
 
 def load_config_defaults(path: str) -> dict[str, Any]:
     if not path:
         return {}
-    p = Path(path)
-    if not p.exists():
-        raise FileNotFoundError(f"config not found: {p}")
-    if p.suffix.lower() == ".json":
-        data = json.loads(p.read_text(encoding="utf-8"))
+    config_path = Path(path)
+    if not config_path.exists():
+        raise FileNotFoundError(f"config not found: {config_path}")
+    if config_path.suffix.lower() == ".json":
+        data = json.loads(config_path.read_text(encoding="utf-8"))
     else:
-        data = tomllib.loads(p.read_text(encoding="utf-8"))
+        data = tomllib.loads(config_path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError("config root must be object/table")
-    # 允许顶层或 [discover] 分组
-    cfg = data.get("discover", data)
-    if not isinstance(cfg, dict):
+    config_data = data.get("discover", data)
+    if not isinstance(config_data, dict):
         raise ValueError("config.discover must be object/table")
-    return dict(cfg)
+    return dict(config_data)
 
 
 def parse_args() -> argparse.Namespace:
@@ -151,80 +77,80 @@ def parse_args() -> argparse.Namespace:
     pre_known, _ = pre.parse_known_args()
     cfg_defaults = load_config_defaults(pre_known.config) if pre_known.config else {}
 
-    p = argparse.ArgumentParser(description="Camoufox 批量搜索 NEV 严格口径候选来源（增强版）")
-    p.set_defaults(**cfg_defaults)
-    p.add_argument("--config", default=pre_known.config, help="可选：JSON/TOML 配置文件")
-    p.add_argument("--year", type=int, default=2023, help="目标年份（默认 2023）")
-    p.add_argument(
+    parser = argparse.ArgumentParser(description="Camoufox 批量搜索 NEV 严格口径候选来源（增强版）")
+    parser.set_defaults(**cfg_defaults)
+    parser.add_argument("--config", default=pre_known.config, help="可选：JSON/TOML 配置文件")
+    parser.add_argument("--year", type=int, default=2023, help="目标年份（默认 2023）")
+    parser.add_argument(
         "--provinces",
         default="",
         help="手工指定省份，逗号分隔；留空则自动读取 strict 面板中该年份缺失省份",
     )
-    p.add_argument("--max-pages", type=int, default=30, help="每省最多抓取候选 URL 数")
-    p.add_argument(
+    parser.add_argument("--max-pages", type=int, default=30, help="每省最多抓取候选 URL 数")
+    parser.add_argument(
         "--max-fetch-pages",
         type=int,
         default=20,
         help="每省实际抓取正文的 URL 数（<= max-pages，默认20，提速）",
     )
-    p.add_argument(
+    parser.add_argument(
         "--run-mode",
         choices=["headless", "headed", "virtual"],
         default="headless",
         help="浏览器模式：headless(默认) / headed / virtual",
     )
-    # 兼容旧参数
-    p.add_argument("--headless", action="store_true", help="兼容参数：等价于 --run-mode headless")
-    p.add_argument("--delay-min-ms", type=int, default=1000, help="查询间最小等待毫秒")
-    p.add_argument("--delay-max-ms", type=int, default=2200, help="查询间最大等待毫秒")
-    p.add_argument("--output", default=str(DEFAULT_OUT), help="输出 JSON 路径")
-    p.add_argument(
+    parser.add_argument("--headless", action="store_true", help="兼容参数：等价于 --run-mode headless")
+    parser.add_argument("--delay-min-ms", type=int, default=1000, help="查询间最小等待毫秒")
+    parser.add_argument("--delay-max-ms", type=int, default=2200, help="查询间最大等待毫秒")
+    parser.add_argument("--output", default=str(DEFAULT_OUT), help="输出 JSON 路径")
+    parser.add_argument(
         "--addon-path",
         default=str(DEFAULT_ADDON),
         help="指纹混淆插件目录（Firefox unpacked addon）",
     )
-    p.add_argument(
+    parser.add_argument(
         "--engines",
         default="google,tavily,bing,sogou,360",
         help="搜索引擎顺序，逗号分隔，可选：sogou,360,bing,google,tavily",
     )
-    p.add_argument(
+    parser.add_argument(
         "--domain-filter",
         default="gov.cn",
         help="URL域名白名单（逗号分隔，空字符串表示不做域名过滤）",
     )
-    p.add_argument("--google-max-results", type=int, default=15, help="Google 每次query最大结果数")
-    p.add_argument("--google-hl", default="zh-CN", help="Google 语言参数 hl")
-    p.add_argument("--google-gl", default="", help="Google 地区参数 gl（可空）")
-    p.add_argument("--tavily-api-key", default="", help="Tavily API Key（可用环境变量 TAVILY_API_KEY）")
-    p.add_argument("--tavily-endpoint", default="https://api.tavily.com/search", help="Tavily 搜索接口")
-    p.add_argument("--tavily-max-results", type=int, default=10, help="Tavily 每次query返回上限")
-    p.add_argument("--tavily-topic", default="general", help="Tavily topic: general/news")
-    p.add_argument("--fetch-workers", type=int, default=8, help="抓取候选URL正文的并发线程数")
-    p.add_argument(
+    parser.add_argument("--google-max-results", type=int, default=15, help="Google 每次query最大结果数")
+    parser.add_argument("--google-hl", default="zh-CN", help="Google 语言参数 hl")
+    parser.add_argument("--google-gl", default="", help="Google 地区参数 gl（可空）")
+    parser.add_argument("--tavily-api-key", default="", help="Tavily API Key（可用环境变量 TAVILY_API_KEY）")
+    parser.add_argument("--tavily-endpoint", default="https://api.tavily.com/search", help="Tavily 搜索接口")
+    parser.add_argument("--tavily-max-results", type=int, default=10, help="Tavily 每次query返回上限")
+    parser.add_argument("--tavily-topic", default="general", help="Tavily topic: general/news")
+    parser.add_argument("--fetch-workers", type=int, default=8, help="抓取候选URL正文的并发线程数")
+    parser.add_argument(
         "--province-workers",
         type=int,
         default=1,
         help="省份并发worker数（每个worker独立浏览器，默认1）",
     )
-    p.add_argument(
+    parser.add_argument(
         "--engine-mode",
         choices=["first", "merge"],
         default="merge",
         help="搜索引擎模式：first=首个命中即返回；merge=合并多引擎结果（默认）",
     )
-    p.add_argument(
+    parser.add_argument(
         "--per-domain-cap",
         type=int,
         default=3,
         help="每省同一域名最多保留URL数（0表示不限制）",
     )
-    p.add_argument("--request-timeout-sec", type=int, default=18, help="正文抓取请求超时秒数")
-    p.add_argument("--query-timeout-ms", type=int, default=45000, help="单次查询页面超时毫秒")
-    p.add_argument("--max-candidates", type=int, default=12, help="每省输出 top 候选数量")
-    p.add_argument("--resume", action="store_true", help="从已有输出断点续跑")
-    p.add_argument("--force", action="store_true", help="忽略断点信息，强制重跑")
-    args = p.parse_args()
+    parser.add_argument("--request-timeout-sec", type=int, default=18, help="正文抓取请求超时秒数")
+    parser.add_argument("--query-timeout-ms", type=int, default=45000, help="单次查询页面超时毫秒")
+    parser.add_argument("--max-candidates", type=int, default=12, help="每省输出 top 候选数量")
+    parser.add_argument("--resume", action="store_true", help="从已有输出断点续跑")
+    parser.add_argument("--force", action="store_true", help="忽略断点信息，强制重跑")
+    args = parser.parse_args()
+
     if not args.tavily_api_key:
         args.tavily_api_key = os.environ.get("TAVILY_API_KEY") or os.environ.get("TAVILY_KEY") or ""
     args.fetch_workers = max(1, int(args.fetch_workers))
@@ -233,7 +159,7 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def resolve_headless_mode(args: argparse.Namespace):
+def resolve_headless_mode(args: argparse.Namespace) -> bool | str:
     if getattr(args, "headless", False):
         return True
     if args.run_mode == "headless":
@@ -244,17 +170,17 @@ def resolve_headless_mode(args: argparse.Namespace):
 
 
 def parse_engines(raw: str) -> list[str]:
-    arr = [x.strip().lower() for x in (raw or "").split(",") if x.strip()]
-    if not arr:
+    engines = [item.strip().lower() for item in (raw or "").split(",") if item.strip()]
+    if not engines:
         return ["google", "tavily", "bing", "sogou", "360"]
-    bad = [x for x in arr if x not in SUPPORTED_ENGINES]
-    if bad:
-        raise ValueError(f"unsupported engines: {bad}, supported={SUPPORTED_ENGINES}")
-    return arr
+    unknown = [item for item in engines if item not in SUPPORTED_ENGINES]
+    if unknown:
+        raise ValueError(f"unsupported engines: {unknown}, supported={SUPPORTED_ENGINES}")
+    return engines
 
 
 def parse_domain_filter(raw: str) -> list[str]:
-    return [x.strip().lower() for x in (raw or "").split(",") if x.strip()]
+    return [item.strip().lower() for item in (raw or "").split(",") if item.strip()]
 
 
 def extract_domain(url: str) -> str:
@@ -264,30 +190,17 @@ def extract_domain(url: str) -> str:
         return ""
 
 
-def score_domain_quality(url: str) -> int:
-    host = extract_domain(url)
-    if not host:
-        return 0
-    score = 0
-    if host.endswith(".gov.cn") or ".gov.cn" in host:
-        score += 6
-    if any(k in host for k in ["stats", "tjj", "mps", "ga", "gov"]):
-        score += 2
-    if any(k in host for k in ["weixin.qq.com", "toutiao", "sohu", "163.com", "baijiahao"]):
-        score -= 3
-    return score
-
-
-def cap_urls_by_domain(rows: list[dict], max_pages: int, per_domain_cap: int) -> list[dict]:
+def cap_urls_by_domain(rows: list[dict[str, Any]], max_pages: int, per_domain_cap: int) -> list[dict[str, Any]]:
     if max_pages <= 0:
         return []
     if per_domain_cap <= 0:
         return rows[:max_pages]
-    selected: list[dict] = []
-    skipped: list[dict] = []
+
+    selected: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
     domain_counter: dict[str, int] = defaultdict(int)
     for row in rows:
-        domain = extract_domain(row.get("url", ""))
+        domain = extract_domain(str(row.get("url", "")))
         if domain and domain_counter[domain] >= per_domain_cap:
             skipped.append(row)
             continue
@@ -296,385 +209,128 @@ def cap_urls_by_domain(rows: list[dict], max_pages: int, per_domain_cap: int) ->
             domain_counter[domain] += 1
         if len(selected) >= max_pages:
             return selected
-    if len(selected) >= max_pages:
-        return selected[:max_pages]
-    for row in skipped:
-        selected.append(row)
-        if len(selected) >= max_pages:
-            break
-    return selected
+
+    if len(selected) < max_pages:
+        for row in skipped:
+            selected.append(row)
+            if len(selected) >= max_pages:
+                break
+
+    return selected[:max_pages]
 
 
 def load_missing_provinces(year: int) -> list[str]:
     rows = list(csv.DictReader(PANEL_PATH.open("r", encoding="utf-8-sig")))
-    r = [x for x in rows if (x.get("year") or "").strip() == str(year)]
-    miss = sorted([x["province"] for x in r if not (x.get("nev_stock_10k") or "").strip()])
-    return miss
+    target_rows = [row for row in rows if (row.get("year") or "").strip() == str(year)]
+    return sorted(row["province"] for row in target_rows if not (row.get("nev_stock_10k") or "").strip())
 
 
-def split_sentences(text: str) -> list[str]:
-    text = re.sub(r"\s+", " ", text)
-    arr = re.split(r"(?<=[。！？；])", text)
-    return [x.strip() for x in arr if x.strip()]
-
-
-def fetch_text(url: str, retries: int = 2, timeout_sec: int = 18) -> str:
-    last_err: Exception | None = None
-    for _ in range(retries + 1):
-        try:
-            r = requests.get(url, headers=UA, timeout=timeout_sec)
-            if r.status_code != 200:
-                raise RuntimeError(f"status={r.status_code}")
-            r.encoding = r.apparent_encoding or "utf-8"
-            txt = BeautifulSoup(r.text, "html.parser").get_text(" ")
-            txt = re.sub(r"\s+", " ", txt)
-            return txt
-        except Exception as e:
-            last_err = e
-            time.sleep(0.4)
-    raise RuntimeError(f"fetch failed: {url}, err={last_err}")
-
-
-def save_json(path: Path, data: dict) -> None:
+def save_json(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def load_existing_json(path: Path) -> dict:
+def load_existing_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
+    return data if isinstance(data, dict) else {}
 
 
-def extract_candidates(province: str, url: str, text: str) -> list[dict]:
-    alias = PROV_ALIAS.get(province, [province.replace("省", "").replace("市", "")])
-    explicit_name = alias[0]
-    url_l = url.lower()
-    out: list[dict] = []
-    for sent in split_sentences(text):
-        if "保有量" not in sent:
-            continue
-        if not ("新能源" in sent or "电动汽车" in sent):
-            continue
-        if "全国新能源汽车保有量" in sent:
-            continue
-        has_explicit_prov = explicit_name in sent or province in sent
-        has_generic_scope = any(a in sent for a in alias[1:])
-        if not (has_explicit_prov or has_generic_scope):
-            continue
-        if not has_explicit_prov:
-            hints = PROV_URL_HINTS.get(province, [])
-            if hints and not any(h in url_l for h in hints):
-                continue
-
-        m = None
-        for token in ["新能源汽车保有量", "新能源车保有量", "电动汽车保有量"]:
-            p = sent.find(token)
-            if p < 0:
-                continue
-            tail = sent[p : p + 90]
-            m = re.search(r"(?:达到|达|为|约为|突破)?\s*([0-9]+(?:\.[0-9]+)?)\s*(万辆|辆)", tail)
-            if m:
-                break
-        if not m:
-            m = re.search(
-                r"(?:新能源汽车|新能源车|电动汽车)[^。；，,]{0,40}(?:保有量)?[^0-9]{0,12}([0-9]+(?:\.[0-9]+)?)\s*(万辆|辆)",
-                sent,
-            )
-        if not m:
-            continue
-
-        val = float(m.group(1))
-        unit = m.group(2)
-        val_10k = val if unit == "万辆" else val * 0.0001
-
-        score = 0
-        if any(k in sent for k in ["截至2023年底", "2023年底", "2023年末", "截至去年底", "截至去年末"]):
-            score += 8
-        if any(k in sent for k in ["截至11月底", "截至10月底", "截至9月底", "截至今年9月30日"]):
-            score += 5
-        if any(k in sent for k in ["全省", "全区", "我省", "我区"]):
-            score += 4
-        if has_explicit_prov:
-            score += 4
-        if "全市" in sent:
-            score -= 5
-        if "全国" in sent:
-            score -= 9
-        for prov_kw in OTHER_PROV_HINTS:
-            if prov_kw == explicit_name:
-                continue
-            if prov_kw in sent:
-                score -= 8
-                break
-
-        out.append(
-            {
-                "url": url,
-                "sentence": sent[:260],
-                "value_raw": val,
-                "unit": unit,
-                "value_10k": round(val_10k, 6),
-                "score": score,
-                "explicit_province_in_sentence": has_explicit_prov,
-            }
-        )
-    return out
-
-
-def dedup_candidates(cands: list[dict]) -> list[dict]:
-    dedup = []
-    used = set()
-    for c in sorted(cands, key=lambda x: x["score"], reverse=True):
-        k = (c["url"], c["value_10k"], c["sentence"])
-        if k in used:
-            continue
-        used.add(k)
-        dedup.append(c)
-    return dedup
-
-
-def build_queries(prov: str, year: int) -> list[str]:
-    y = str(year)
+def build_queries(province: str, year: int) -> list[str]:
+    year_text = str(year)
     return [
-        f"{prov} 截至{y}年底 新能源汽车 保有量 site:gov.cn",
-        f"{prov} {y} 新能源汽车 保有量 site:gov.cn",
-        f"{prov} {y} 电动汽车 保有量 site:gov.cn",
-        f"{prov} 机动车 保有量 新能源汽车 site:gov.cn",
-        f"{prov} 交管 新能源汽车 保有量 site:gov.cn",
+        f"{province} 截至{year_text}年底 新能源汽车 保有量 site:gov.cn",
+        f"{province} {year_text} 新能源汽车 保有量 site:gov.cn",
+        f"{province} {year_text} 电动汽车 保有量 site:gov.cn",
+        f"{province} 机动车 保有量 新能源汽车 site:gov.cn",
+        f"{province} 交管 新能源汽车 保有量 site:gov.cn",
     ]
 
 
-def score_search_row(province: str, year: int, row: dict) -> int:
-    txt = f"{row.get('title', '')} {row.get('snippet', '')}"
-    score = 0
-    short = PROV_ALIAS.get(province, [province.replace("省", "").replace("市", "")])[0]
-    if short in txt or province in txt:
-        score += 4
-    if "保有量" in txt:
-        score += 4
-    if "新能源" in txt:
-        score += 3
-    if str(year) in txt:
-        score += 3
-    if "统计公报" in txt or "政府" in txt or "公安" in txt:
-        score += 3
-    if "国民经济和社会发展" in txt:
-        score += 2
-    if "全国" in txt:
-        score -= 4
-    if "全市" in txt or "某市" in txt:
-        score -= 3
-    return score
-
-
-def search_urls_with_sogou(page, query: str) -> tuple[bool, list[dict]]:
-    url = "https://www.sogou.com/web?query=" + requests.utils.quote(query)
-    page.goto(url, timeout=45000, wait_until="domcontentloaded")
-    page.wait_for_timeout(random.randint(1200, 2000))
-    anti = "/antispider/" in page.url
-    rows = page.evaluate(
-        """() => {
-            const out = [];
-            const blocks = Array.from(document.querySelectorAll('.vrwrap'));
-            for (const b of blocks) {
-                const a = b.querySelector('h3 a, h4 a, a');
-                const title = (a?.innerText || '').replace(/\\s+/g, ' ').trim();
-                const dataUrl = b.querySelector('[data-url]')?.getAttribute('data-url') || '';
-                const snippet = (b.innerText || '').replace(/\\s+/g, ' ').trim();
-                if (title && dataUrl) out.push({title, data_url: dataUrl, snippet});
+def _engine_kwargs(engine: str, args: argparse.Namespace) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {"timeout_ms": int(args.query_timeout_ms)}
+    if engine == "google":
+        kwargs.update(
+            {
+                "max_results": int(args.google_max_results),
+                "hl": args.google_hl,
+                "gl": args.google_gl,
             }
-            return out.slice(0, 20);
-        }"""
-    )
-    return anti, rows
-
-
-def search_urls_with_bing(page, query: str) -> list[dict]:
-    url = "https://www.bing.com/search?q=" + requests.utils.quote(query)
-    page.goto(url, timeout=45000, wait_until="domcontentloaded")
-    page.wait_for_timeout(random.randint(900, 1600))
-    rows = page.evaluate(
-        """() => {
-            const out = [];
-            const items = Array.from(document.querySelectorAll('li.b_algo'));
-            for (const li of items) {
-                const a = li.querySelector('h2 a');
-                const href = a?.getAttribute('href') || '';
-                const title = (a?.innerText || '').replace(/\\s+/g, ' ').trim();
-                const snippet = (li.innerText || '').replace(/\\s+/g, ' ').trim();
-                if (href && title) out.push({title, data_url: href, snippet});
+        )
+    elif engine == "tavily":
+        kwargs.update(
+            {
+                "api_key": args.tavily_api_key,
+                "endpoint": args.tavily_endpoint,
+                "max_results": int(args.tavily_max_results),
+                "topic": args.tavily_topic,
             }
-            return out.slice(0, 15);
-        }"""
-    )
-    return rows
+        )
+    return kwargs
 
 
-def search_urls_with_google(
-    page, query: str, max_results: int = 15, hl: str = "zh-CN", gl: str = ""
-) -> tuple[bool, list[dict]]:
-    q = requests.utils.quote(query)
-    url = f"https://www.google.com/search?q={q}&num={max(1, min(max_results, 50))}&hl={hl}"
-    if gl:
-        url += f"&gl={gl}"
-    page.goto(url, timeout=45000, wait_until="domcontentloaded")
-    page.wait_for_timeout(random.randint(900, 1600))
-    anti = "/sorry/" in page.url
-    rows = page.evaluate(
-        """() => {
-            const out = [];
-            const anchors = Array.from(document.querySelectorAll('div#search a'));
-            for (const a of anchors) {
-                const href = a.getAttribute('href') || '';
-                const h3 = a.querySelector('h3');
-                const title = (h3?.innerText || a.innerText || '').replace(/\\s+/g, ' ').trim();
-                if (!href || !title) continue;
-                if (href.startsWith('/')) continue;
-                if (!/^https?:\\/\\//.test(href)) continue;
-                const card = a.closest('div.g, div.MjjYud, div.tF2Cxc') || a.parentElement;
-                const snippet = (card?.innerText || '').replace(/\\s+/g, ' ').trim();
-                out.push({title, data_url: href, snippet});
-            }
-            return out.slice(0, 30);
-        }"""
-    )
-    return anti, rows
-
-
-def search_urls_with_tavily(
-    query: str,
-    api_key: str,
-    endpoint: str,
-    max_results: int = 10,
-    topic: str = "general",
-) -> list[dict]:
-    if not api_key:
-        return []
-    payload = {
-        "api_key": api_key,
-        "query": query,
-        "search_depth": "advanced",
-        "max_results": max(1, min(int(max_results), 20)),
-        "topic": topic or "general",
-        "include_answer": False,
-        "include_images": False,
-        "include_raw_content": False,
-    }
-    r = requests.post(endpoint, json=payload, timeout=25)
-    if r.status_code != 200:
-        return []
-    data = r.json()
-    arr = data.get("results", []) if isinstance(data, dict) else []
-    out: list[dict] = []
-    for it in arr:
-        if not isinstance(it, dict):
-            continue
-        u = (it.get("url") or "").strip()
-        title = (it.get("title") or "").strip()
-        snippet = (it.get("content") or "").strip()
-        if u and title:
-            out.append({"title": title, "data_url": u, "snippet": snippet})
-    return out
-
-
-def search_urls_with_360(page, query: str) -> tuple[bool, list[dict]]:
-    url = "https://www.so.com/s?q=" + requests.utils.quote(query)
-    page.goto(url, timeout=45000, wait_until="domcontentloaded")
-    page.wait_for_timeout(random.randint(900, 1500))
-    anti = "qcaptcha.so.com" in page.url
-    if anti:
-        return True, []
-    rows = page.evaluate(
-        """() => {
-            const out = [];
-            const items = Array.from(document.querySelectorAll('h3.res-title a'));
-            for (const a of items) {
-                const title = (a.innerText || '').replace(/\\s+/g, ' ').trim();
-                const dataUrl = a.getAttribute('data-mdurl') || a.getAttribute('href') || '';
-                if (title && dataUrl) out.push({title, data_url: dataUrl, snippet: title});
-            }
-            return out.slice(0, 20);
-        }"""
-    )
-    return False, rows
-
-
-def run_single_query(page, query: str, engines: list[str], args: argparse.Namespace) -> tuple[list[dict], dict]:
+def run_single_query(
+    page: Any, query: str, engines: list[str], args: argparse.Namespace
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     anti_stats = {"sogou": False, "360": False, "google": False}
-    all_rows: list[dict] = []
+    all_rows: list[dict[str, Any]] = []
     hit_engines: list[str] = []
     errors: list[dict[str, str]] = []
-    for engine in engines:
-        try:
-            rows: list[dict] = []
-            if engine == "sogou":
-                anti, rows = search_urls_with_sogou(page, query)
-                anti_stats["sogou"] = anti
-            elif engine == "360":
-                anti, rows = search_urls_with_360(page, query)
-                anti_stats["360"] = anti
-            elif engine == "bing":
-                rows = search_urls_with_bing(page, query)
-            elif engine == "google":
-                anti, rows = search_urls_with_google(
-                    page,
-                    query,
-                    max_results=int(args.google_max_results),
-                    hl=args.google_hl,
-                    gl=args.google_gl,
-                )
-                anti_stats["google"] = anti
-            elif engine == "tavily":
-                rows = search_urls_with_tavily(
-                    query,
-                    api_key=args.tavily_api_key,
-                    endpoint=args.tavily_endpoint,
-                    max_results=int(args.tavily_max_results),
-                    topic=args.tavily_topic,
-                )
-            else:
-                rows = []
 
+    for engine_name in engines:
+        try:
+            engine = get_engine(engine_name)
+            rows = engine.search(query, page, **_engine_kwargs(engine_name, args))
+            meta = engine.get_last_meta()
+            anti_stats["sogou"] = anti_stats["sogou"] or bool(meta.get("anti_sogou"))
+            anti_stats["360"] = anti_stats["360"] or bool(meta.get("anti_360"))
+            anti_stats["google"] = anti_stats["google"] or bool(meta.get("anti_google"))
             if rows:
-                hit_engines.append(engine)
-                for row in rows:
-                    item = dict(row)
-                    item["engine"] = engine
-                    all_rows.append(item)
+                hit_engines.append(engine_name)
+                all_rows.extend(
+                    {
+                        "title": result.title,
+                        "data_url": result.url,
+                        "snippet": result.snippet,
+                        "engine": engine_name,
+                    }
+                    for result in rows
+                )
                 if args.engine_mode == "first":
                     break
-        except Exception as e:
-            errors.append({"engine": engine, "error": str(e)[:180]})
-            continue
+        except Exception as exc:
+            errors.append({"engine": engine_name, "error": str(exc)[:180]})
 
-    dedup_by_url: dict[str, dict] = {}
+    dedup_by_url: dict[str, dict[str, Any]] = {}
     order = 0
     for row in all_rows:
-        u = (row.get("data_url") or "").strip()
-        if not u:
+        url = (row.get("data_url") or "").strip()
+        if not url:
             continue
-        prev = dedup_by_url.get(u)
+        previous = dedup_by_url.get(url)
         row["_order"] = order
         order += 1
-        if prev is None:
-            dedup_by_url[u] = row
+        if previous is None:
+            dedup_by_url[url] = row
             continue
-        prev_len = len(prev.get("title") or "") + len(prev.get("snippet") or "")
-        cur_len = len(row.get("title") or "") + len(row.get("snippet") or "")
-        if cur_len > prev_len:
-            row["_order"] = int(prev.get("_order", row["_order"]))
-            dedup_by_url[u] = row
+        previous_len = len(previous.get("title") or "") + len(previous.get("snippet") or "")
+        current_len = len(row.get("title") or "") + len(row.get("snippet") or "")
+        if current_len > previous_len:
+            row["_order"] = int(previous.get("_order", row["_order"]))
+            dedup_by_url[url] = row
 
-    rows_final = sorted(dedup_by_url.values(), key=lambda x: int(x.get("_order", 0)))
+    rows_final = sorted(dedup_by_url.values(), key=lambda item: int(item.get("_order", 0)))
     for row in rows_final:
         row.pop("_order", None)
+
     used_engine_str = ""
     if hit_engines:
         used_engine_str = hit_engines[0] if len(hit_engines) == 1 else ",".join(hit_engines)
+
     return rows_final, {
         "engine": used_engine_str,
         "engines_hit": hit_engines,
@@ -685,131 +341,124 @@ def run_single_query(page, query: str, engines: list[str], args: argparse.Namesp
     }
 
 
-def scan_url_for_candidates(province: str, url: str, timeout_sec: int) -> list[dict]:
-    with PAGE_CACHE_LOCK:
-        if url in PAGE_TEXT_CACHE:
-            return extract_candidates(province, url, PAGE_TEXT_CACHE[url])
-        if url in PAGE_ERR_CACHE:
-            raise RuntimeError(PAGE_ERR_CACHE[url])
-    try:
-        txt = fetch_text(url, timeout_sec=timeout_sec)
-        with PAGE_CACHE_LOCK:
-            PAGE_TEXT_CACHE[url] = txt
-        return extract_candidates(province, url, txt)
-    except Exception as e:
-        with PAGE_CACHE_LOCK:
-            PAGE_ERR_CACHE[url] = str(e)
-        raise
+def scan_url_for_candidates(province: str, url: str, timeout_sec: int, year: int) -> list[dict[str, object]]:
+    text = get_or_fetch_text(url, timeout_sec=timeout_sec)
+    return extract_candidates(province, url, text, year=year)
 
 
 def process_single_province(
-    browser,
-    prov: str,
+    browser: Any,
+    province: str,
     args: argparse.Namespace,
     engines: list[str],
     max_fetch_pages: int,
     domain_filters: list[str],
-) -> dict:
-    queries = build_queries(prov, args.year)
-    urls: list[str] = []
-    query_debug: list[dict] = []
+) -> dict[str, Any]:
+    queries = build_queries(province, args.year)
+    query_debug: list[dict[str, Any]] = []
     anti_count = 0
+    url_rows: dict[str, dict[str, Any]] = {}
 
-    ctx = browser.new_context()
-    page = ctx.new_page()
+    context = browser.new_context()
+    page = context.new_page()
     page.set_default_timeout(int(args.query_timeout_ms))
     try:
-        url_rows: dict[str, dict] = {}
-        for q in queries:
+        for query in queries:
             try:
-                rows, dbg = run_single_query(page, q, engines, args)
-            except Exception as e:
-                query_debug.append({"query": q, "error": str(e)[:180]})
-                if "Target page" in str(e) or "browser has been closed" in str(e):
+                rows, debug = run_single_query(page, query, engines, args)
+            except Exception as exc:
+                query_debug.append({"query": query, "error": str(exc)[:180]})
+                if "Target page" in str(exc) or "browser has been closed" in str(exc):
                     break
                 continue
-            if dbg.get("anti_sogou"):
+
+            if debug.get("anti_sogou"):
                 anti_count += 1
-            if dbg.get("anti_360"):
+            if debug.get("anti_360"):
                 anti_count += 1
-            if dbg.get("anti_google"):
+            if debug.get("anti_google"):
                 anti_count += 1
-            for r in rows:
-                u = (r.get("data_url") or "").strip()
-                if not (u.startswith("http://") or u.startswith("https://")):
+
+            for row in rows:
+                url = (row.get("data_url") or "").strip()
+                if not (url.startswith("http://") or url.startswith("https://")):
                     continue
-                u_l = u.lower()
-                if domain_filters and (not any(x in u_l for x in domain_filters)):
+                lower_url = url.lower()
+                if domain_filters and not any(domain in lower_url for domain in domain_filters):
                     continue
-                row_engine = (r.get("engine") or dbg.get("engine") or "").split(",")[0]
-                row_score = score_search_row(prov, args.year, r)
-                domain_score = score_domain_quality(u)
-                row_score += domain_score
-                row_score += int(ENGINE_BONUS.get(row_engine, 0))
-                prev = url_rows.get(u)
-                if (prev is None) or (row_score > int(prev.get("search_score", -999))):
-                    url_rows[u] = {
-                        "url": u,
-                        "title": (r.get("title") or "").strip(),
-                        "snippet": (r.get("snippet") or "").strip(),
-                        "query": q,
-                        "engine": row_engine or dbg.get("engine", ""),
+
+                row_engine = (row.get("engine") or debug.get("engine") or "").split(",")[0]
+                row_score = score_search_result(
+                    province,
+                    args.year,
+                    str(row.get("title") or ""),
+                    str(row.get("snippet") or ""),
+                )
+                domain_score = score_domain_quality(url)
+                row_score += domain_score + int(ENGINE_BONUS.get(row_engine, 0))
+
+                previous = url_rows.get(url)
+                if previous is None or row_score > int(previous.get("search_score", -999)):
+                    url_rows[url] = {
+                        "url": url,
+                        "title": (row.get("title") or "").strip(),
+                        "snippet": (row.get("snippet") or "").strip(),
+                        "query": query,
+                        "engine": row_engine or debug.get("engine", ""),
                         "search_score": row_score,
                         "domain_score": domain_score,
                     }
+
             query_debug.append(
                 {
-                    "query": q,
-                    "engine": dbg.get("engine", ""),
-                    "engines_hit": dbg.get("engines_hit", []),
+                    "query": query,
+                    "engine": debug.get("engine", ""),
+                    "engines_hit": debug.get("engines_hit", []),
                     "row_count": len(rows),
-                    "anti_sogou": bool(dbg.get("anti_sogou")),
-                    "anti_360": bool(dbg.get("anti_360")),
-                    "anti_google": bool(dbg.get("anti_google")),
-                    "errors": dbg.get("errors", []),
+                    "anti_sogou": bool(debug.get("anti_sogou")),
+                    "anti_360": bool(debug.get("anti_360")),
+                    "anti_google": bool(debug.get("anti_google")),
+                    "errors": debug.get("errors", []),
                 }
             )
             try:
                 page.wait_for_timeout(random.randint(args.delay_min_ms, args.delay_max_ms))
-            except Exception as e:
-                query_debug.append({"query": q, "wait_error": str(e)[:180]})
-                if "Target page" in str(e) or "browser has been closed" in str(e):
+            except Exception as exc:
+                query_debug.append({"query": query, "wait_error": str(exc)[:180]})
+                if "Target page" in str(exc) or "browser has been closed" in str(exc):
                     break
-        ranked = sorted(url_rows.values(), key=lambda x: int(x.get("search_score", 0)), reverse=True)
-        selected = cap_urls_by_domain(
-            ranked,
-            max_pages=int(args.max_pages),
-            per_domain_cap=int(args.per_domain_cap),
-        )
-        fetch_targets = selected[:max_fetch_pages]
-        urls = [x["url"] for x in selected]
     finally:
         with contextlib.suppress(Exception):
-            ctx.close()
+            context.close()
 
-    cands: list[dict] = []
-    max_workers = max(1, int(args.fetch_workers))
-    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+    ranked = sorted(url_rows.values(), key=lambda item: int(item.get("search_score", 0)), reverse=True)
+    selected = cap_urls_by_domain(ranked, max_pages=int(args.max_pages), per_domain_cap=int(args.per_domain_cap))
+    fetch_targets = selected[:max_fetch_pages]
+
+    candidates: list[dict[str, object]] = []
+    with ThreadPoolExecutor(max_workers=max(1, int(args.fetch_workers))) as executor:
         futures = {
-            ex.submit(scan_url_for_candidates, prov, item["url"], int(args.request_timeout_sec)): item
+            executor.submit(
+                scan_url_for_candidates, province, item["url"], int(args.request_timeout_sec), args.year
+            ): item
             for item in fetch_targets
         }
-        for fut in as_completed(futures):
-            meta = futures[fut]
+        for future in as_completed(futures):
+            meta = futures[future]
             try:
-                got = fut.result()
-                for c in got:
-                    c["search_score"] = meta.get("search_score", 0)
-                    c["search_title"] = meta.get("title", "")[:120]
-                    c["search_query"] = meta.get("query", "")
-                    c["search_engine"] = meta.get("engine", "")
-                cands.extend(got)
+                found = future.result()
             except Exception:
                 continue
+            for candidate in found:
+                candidate["search_score"] = meta.get("search_score", 0)
+                candidate["search_title"] = str(meta.get("title", ""))[:120]
+                candidate["search_query"] = meta.get("query", "")
+                candidate["search_engine"] = meta.get("engine", "")
+            candidates.extend(found)
 
-    dedup = dedup_candidates(cands)
-    top_n = dedup[: max(1, int(args.max_candidates))]
-    selected_urls = [x.get("url", "") for x in selected if x.get("url")]
+    deduplicated = dedup(candidates)
+    top_n = deduplicated[: max(1, int(args.max_candidates))]
+    selected_urls = [item.get("url", "") for item in selected if item.get("url")]
     return {
         "finished": True,
         "searched_at": datetime.now().isoformat(timespec="seconds"),
@@ -819,56 +468,57 @@ def process_single_province(
         "queries": query_debug,
         "anti_spider_hits": anti_count,
         "url_count_raw": len(url_rows),
-        "url_count": len(urls),
+        "url_count": len(selected),
         "fetch_count": len(fetch_targets),
         "selected_urls": selected_urls[:100],
         "selected_url_meta": [
             {
-                "url": x.get("url", ""),
-                "search_score": x.get("search_score", 0),
-                "engine": x.get("engine", ""),
-                "query": x.get("query", ""),
-                "title": x.get("title", "")[:120],
+                "url": item.get("url", ""),
+                "search_score": item.get("search_score", 0),
+                "engine": item.get("engine", ""),
+                "query": item.get("query", ""),
+                "title": str(item.get("title", ""))[:120],
             }
-            for x in selected[:60]
+            for item in selected[:60]
         ],
-        "candidate_count": len(dedup),
+        "candidate_count": len(deduplicated),
         "top_candidates": top_n,
     }
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     args = parse_args()
-    out_path = Path(args.output)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     engines = parse_engines(args.engines)
     domain_filters = parse_domain_filter(args.domain_filter)
 
     if args.provinces.strip():
-        provinces = [x.strip() for x in args.provinces.split(",") if x.strip()]
+        provinces = [item.strip() for item in args.provinces.split(",") if item.strip()]
     else:
         provinces = load_missing_provinces(args.year)
     if not provinces:
-        print("[INFO] no provinces to process")
+        logging.info("no provinces to process")
         return
 
-    result: dict[str, dict] = load_existing_json(out_path) if args.resume else {}
+    result: dict[str, dict[str, Any]] = load_existing_json(output_path) if args.resume else {}
     to_run: list[str] = []
-    for prov in provinces:
+    for province in provinces:
         if args.force:
-            to_run.append(prov)
+            to_run.append(province)
             continue
-        prev = result.get(prov) if isinstance(result, dict) else None
-        if prev and prev.get("finished"):
-            print(f"[SKIP] {prov} (resume hit)")
+        previous = result.get(province) if isinstance(result, dict) else None
+        if previous and previous.get("finished"):
+            logging.info("[SKIP] %s (resume hit)", province)
             continue
-        to_run.append(prov)
+        to_run.append(province)
 
     if not to_run:
-        print("[INFO] all target provinces are already completed in output file")
+        logging.info("all target provinces are already completed in output file")
         return
 
-    addon_paths = []
+    addon_paths: list[str] = []
     addon_dir = Path(args.addon_path)
     if addon_dir.exists() and (addon_dir / "manifest.json").exists():
         addon_paths.append(str(addon_dir))
@@ -883,14 +533,21 @@ def main() -> None:
     }
 
     max_fetch_pages = max(1, min(int(args.max_fetch_pages), int(args.max_pages)))
-    print(
-        f"[INFO] provinces={len(to_run)}, engines={engines}, engine_mode={args.engine_mode}, "
-        f"fetch_workers={args.fetch_workers}, province_workers={args.province_workers}, "
-        f"max_pages={args.max_pages}, max_fetch_pages={max_fetch_pages}, "
-        f"per_domain_cap={args.per_domain_cap}, domain_filter={domain_filters or 'ALL'}"
+    logging.info(
+        "provinces=%s, engines=%s, engine_mode=%s, fetch_workers=%s, province_workers=%s, max_pages=%s, "
+        "max_fetch_pages=%s, per_domain_cap=%s, domain_filter=%s",
+        len(to_run),
+        engines,
+        args.engine_mode,
+        args.fetch_workers,
+        args.province_workers,
+        args.max_pages,
+        max_fetch_pages,
+        args.per_domain_cap,
+        domain_filters or "ALL",
     )
 
-    def open_browser():
+    def open_browser() -> Camoufox:
         return Camoufox(
             headless=headless_mode,
             os="windows",
@@ -902,53 +559,59 @@ def main() -> None:
 
     result_lock = threading.Lock()
 
-    def save_prov_result(prov_name: str, rec: dict) -> None:
+    def save_province_result(province_name: str, record: dict[str, Any]) -> None:
         with result_lock:
-            result[prov_name] = rec
-            save_json(out_path, result)
+            result[province_name] = record
+            save_json(output_path, result)
 
-    def worker_loop(worker_id: int, prov_list: list[str]) -> None:
-        if not prov_list:
+    def worker_loop(worker_id: int, province_list: list[str]) -> None:
+        if not province_list:
             return
         worker_tag = f"W{worker_id}"
         browser_cm = open_browser()
         browser = browser_cm.__enter__()
         try:
-            for prov in prov_list:
-                print(f"[RUN][{worker_tag}] {prov}")
+            for province in province_list:
+                logging.info("[RUN][%s] %s", worker_tag, province)
                 retried = 0
                 while True:
                     try:
-                        rec = process_single_province(browser, prov, args, engines, max_fetch_pages, domain_filters)
-                        rec["worker"] = worker_tag
-                        save_prov_result(prov, rec)
-                        print(
-                            f"  [OK][{worker_tag}] urls_raw={rec.get('url_count_raw', 0)} "
-                            f"selected={rec.get('url_count', 0)} fetch={rec.get('fetch_count', 0)} "
-                            f"anti={rec.get('anti_spider_hits', 0)} candidates={rec.get('candidate_count', 0)}"
+                        record = process_single_province(
+                            browser, province, args, engines, max_fetch_pages, domain_filters
+                        )
+                        record["worker"] = worker_tag
+                        save_province_result(province, record)
+                        logging.info(
+                            "[OK][%s] urls_raw=%s selected=%s fetch=%s anti=%s candidates=%s",
+                            worker_tag,
+                            record.get("url_count_raw", 0),
+                            record.get("url_count", 0),
+                            record.get("fetch_count", 0),
+                            record.get("anti_spider_hits", 0),
+                            record.get("candidate_count", 0),
                         )
                         break
-                    except Exception as e:
-                        msg = str(e)
-                        recoverable = "Target page" in msg or "browser has been closed" in msg
+                    except Exception as exc:
+                        message = str(exc)
+                        recoverable = "Target page" in message or "browser has been closed" in message
                         if recoverable and retried < 2:
                             retried += 1
-                            print(f"  [WARN][{worker_tag}] browser crashed, restart and retry ({retried}/2)")
+                            logging.warning("[WARN][%s] browser crashed, restart and retry (%s/2)", worker_tag, retried)
                             with contextlib.suppress(Exception):
                                 browser_cm.__exit__(None, None, None)
                             browser_cm = open_browser()
                             browser = browser_cm.__enter__()
                             continue
-                        save_prov_result(
-                            prov,
+                        save_province_result(
+                            province,
                             {
                                 "finished": False,
                                 "searched_at": datetime.now().isoformat(timespec="seconds"),
-                                "error": msg[:300],
+                                "error": message[:300],
                                 "worker": worker_tag,
                             },
                         )
-                        print(f"  [ERR][{worker_tag}] {prov}: {msg}")
+                        logging.error("[ERR][%s] %s: %s", worker_tag, province, message)
                         break
         finally:
             with contextlib.suppress(Exception):
@@ -959,15 +622,15 @@ def main() -> None:
         worker_loop(1, to_run)
     else:
         buckets: list[list[str]] = [[] for _ in range(province_workers)]
-        for idx, prov in enumerate(to_run):
-            buckets[idx % province_workers].append(prov)
-        with ThreadPoolExecutor(max_workers=province_workers) as ex:
-            futures = [ex.submit(worker_loop, i + 1, buckets[i]) for i in range(province_workers) if buckets[i]]
-            for fut in as_completed(futures):
-                fut.result()
+        for index, province in enumerate(to_run):
+            buckets[index % province_workers].append(province)
+        with ThreadPoolExecutor(max_workers=province_workers) as executor:
+            futures = [executor.submit(worker_loop, i + 1, buckets[i]) for i in range(province_workers) if buckets[i]]
+            for future in as_completed(futures):
+                future.result()
 
-    save_json(out_path, result)
-    print(f"[DONE] saved: {out_path}")
+    save_json(output_path, result)
+    logging.info("[DONE] saved: %s", output_path)
 
 
 if __name__ == "__main__":
