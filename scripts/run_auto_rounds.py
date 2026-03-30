@@ -45,14 +45,11 @@ def parse_csv_list(raw: str) -> list[str]:
     return [x.strip() for x in (raw or "").split(",") if x.strip()]
 
 
-def run_command(cmd: Iterable[str] | str, cwd: str, shell: bool = False) -> int:
+def run_command(cmd: Iterable[str] | str, cwd: str) -> int:
     cmd_list = shlex.split(cmd) if isinstance(cmd, str) else list(cmd)
-    if shell:
-        logging.debug("run_command(shell=True) is deprecated; command is executed with shell=False")
     logging.info("[CMD] %s", " ".join(shlex.quote(x) for x in cmd_list))
     result = subprocess.run(cmd_list, cwd=cwd)
     return result.returncode
-
 
 
 def _norm_value_for_key(col: str, raw: str) -> str:
@@ -229,7 +226,7 @@ def main():
                 data=args.data,
                 repo_root=ROOT,
             )
-            rc = run_command(rendered, cwd=ROOT, shell=True)
+            rc = run_command(rendered, cwd=ROOT)
             report_lines.append(f"- Agent命令退出码：{rc}")
             if rc != 0:
                 report_lines.append("- Agent执行失败，停止。")
@@ -249,7 +246,7 @@ def main():
                 data=args.data,
                 repo_root=ROOT,
             )
-            rc = run_command(rendered, cwd=ROOT, shell=True)
+            rc = run_command(rendered, cwd=ROOT)
             report_lines.append(f"- 校验命令退出码：{rc}")
             if rc != 0:
                 report_lines.append("- 校验失败，停止。")
