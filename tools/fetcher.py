@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import functools
 import re
-import threading
 import time
 
 import requests  # type: ignore[import-untyped]
@@ -14,9 +14,7 @@ UA = {
     )
 }
 
-PAGE_TEXT_CACHE: dict[str, str] = {}
-PAGE_ERR_CACHE: dict[str, str] = {}
-PAGE_CACHE_LOCK = threading.Lock()
+_CACHE_MAX_SIZE = 512
 
 
 def fetch_text(url: str, retries: int = 2, timeout_sec: int = 18) -> str:
@@ -35,20 +33,17 @@ def fetch_text(url: str, retries: int = 2, timeout_sec: int = 18) -> str:
     raise RuntimeError(f"fetch failed: {url}, err={last_err}")
 
 
-def get_or_fetch_text(url: str, retries: int = 2, timeout_sec: int = 18) -> str:
-    with PAGE_CACHE_LOCK:
-        if url in PAGE_TEXT_CACHE:
-            return PAGE_TEXT_CACHE[url]
-        if url in PAGE_ERR_CACHE:
-            raise RuntimeError(PAGE_ERR_CACHE[url])
-
+@functools.lru_cache(maxsize=_CACHE_MAX_SIZE)
+def _cached_fetch(url: str, retries: int = 2, timeout_sec: int = 18) -> tuple[bool, str]:
     try:
-        text = fetch_text(url, retries=retries, timeout_sec=timeout_sec)
+        return True, fetch_text(url, retries=retries, timeout_sec=timeout_sec)
     except Exception as exc:
-        with PAGE_CACHE_LOCK:
-            PAGE_ERR_CACHE[url] = str(exc)
-        raise
+        return False, str(exc)
 
-    with PAGE_CACHE_LOCK:
-        PAGE_TEXT_CACHE[url] = text
-    return text
+
+def get_or_fetch_text(url: str, retries: int = 2, timeout_sec: int = 18) -> str:
+    """Thread-safe cached fetch with bounded cache and cached failure details."""
+    ok, payload = _cached_fetch(url, retries=retries, timeout_sec=timeout_sec)
+    if ok:
+        return payload
+    raise RuntimeError(payload)
