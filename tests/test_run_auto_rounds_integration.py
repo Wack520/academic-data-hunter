@@ -137,14 +137,14 @@ def test_run_auto_rounds_end_to_end_with_mock_agent(tmp_path: Path) -> None:
 
     py_exec = Path(sys.executable).as_posix()
     agent_cmd = (
-        f"\"{py_exec}\" \"{agent_script_path.as_posix()}\" "
-        f"--data \"{{data}}\" --task \"{{task_file}}\" --round \"{{round}}\" "
-        f"--state \"{agent_state_path.as_posix()}\""
+        f'"{py_exec}" "{agent_script_path.as_posix()}" '
+        f'--data "{{data}}" --task "{{task_file}}" --round "{{round}}" '
+        f'--state "{agent_state_path.as_posix()}"'
     )
     validate_cmd = (
-        f"\"{py_exec}\" \"{validate_script_path.as_posix()}\" "
-        f"--data \"{{data}}\" --task \"{{task_file}}\" --round \"{{round}}\" "
-        f"--state \"{validate_state_path.as_posix()}\""
+        f'"{py_exec}" "{validate_script_path.as_posix()}" '
+        f'--data "{{data}}" --task "{{task_file}}" --round "{{round}}" '
+        f'--state "{validate_state_path.as_posix()}"'
     )
 
     run_cmd = [

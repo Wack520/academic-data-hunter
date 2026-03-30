@@ -97,13 +97,14 @@ python scripts/run_auto_rounds.py \
 启动 API 进程：
 
 ```bash
-python scripts/agent_hub.py serve --host 127.0.0.1 --port 8787
+python scripts/agent_hub.py serve --host 127.0.0.1 --port 8787 --api-key your_dev_key
 ```
 
 Planner 端点（借鉴 GPT-Researcher 路由）：
 
 ```bash
 curl -X POST http://127.0.0.1:8787/plan-workflow ^
+  -H "Authorization: Bearer your_dev_key" ^
   -H "Content-Type: application/json" ^
   -d "{\"spec_file\":\"templates/research-spec-template.json\"}"
 ```
@@ -112,8 +113,17 @@ curl -X POST http://127.0.0.1:8787/plan-workflow ^
 
 ```bash
 curl -X POST http://127.0.0.1:8787/plan-auto-rounds ^
+  -H "Authorization: Bearer your_dev_key" ^
   -H "Content-Type: application/json" ^
   -d "{\"spec_file\":\"templates/research-spec-template.json\",\"data\":\"cases/case01-nev-carbon/data/charging_piles_by_province.csv\",\"value_col\":\"public_charging_piles\",\"year_start\":2017,\"year_end\":2023}"
+```
+
+Docker 一键启动 Agent Hub：
+
+```bash
+docker compose up -d --build
+# 默认映射 http://127.0.0.1:8787
+# 默认 key: dev-change-me（可在 docker-compose.yml 中修改）
 ```
 
 启动交互式模式：

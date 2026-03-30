@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  agent-hub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: academic-data-hunter-agent-hub
+    command: ["python", "scripts/agent_hub.py", "serve", "--host", "0.0.0.0", "--port", "8787"]
+    environment:
+      AGENT_HUB_API_KEY: "dev-change-me"
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./:/app
+    restart: unless-stopped
