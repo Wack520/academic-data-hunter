@@ -32,5 +32,8 @@ jobs:
       - name: Compile check
         run: python -m compileall -q scripts tools cases
 
-      - name: Run tests
-        run: python -m pytest -q tests/
+      - name: Run tests with coverage
+        run: |
+          pip install coverage
+          python -m coverage run -m pytest -q tests/
+          python -m coverage report --fail-under=70
