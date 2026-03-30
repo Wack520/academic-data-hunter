@@ -15,10 +15,15 @@ import sys
 from collections import Counter
 from typing import TypeAlias
 
+from pydantic import ValidationError
+
+from tools.models import parse_panel_row
+
 Row: TypeAlias = dict[str, str]
 DuplicateKey: TypeAlias = tuple[str, ...]
 RequiredIssue: TypeAlias = tuple[int, str, str, str]
 UnitIssue: TypeAlias = tuple[int, str, str, str, str, str]
+InputIssue: TypeAlias = tuple[int, str]
 
 
 def load_csv(path: str) -> list[Row]:
@@ -81,6 +86,16 @@ def check_unit(rows: list[Row], value_cols: list[str], expected_unit: str) -> li
     return issues
 
 
+def validate_input_rows(rows: list[Row]) -> list[InputIssue]:
+    issues: list[InputIssue] = []
+    for index, row in enumerate(rows, start=2):
+        try:
+            parse_panel_row(row)
+        except ValidationError as exc:
+            issues.append((index, str(exc.errors()[0].get("msg", "invalid row"))))
+    return issues
+
+
 def print_coverage(rows: list[Row], cols: list[str]) -> None:
     """打印各列非空统计"""
     total = len(rows)
@@ -112,6 +127,18 @@ def main() -> None:
     logging.info("文件: %s", args.csv_file)
     logging.info("总行数: %s", len(rows))
     logging.info("列数: %s", len(all_cols))
+
+    input_issues: list[InputIssue] = []
+    if {"province", "year"}.issubset(all_cols):
+        input_issues = validate_input_rows(rows)
+        if input_issues:
+            logging.error("输入数据模型校验失败: %s 处", len(input_issues))
+            for line, reason in input_issues[:10]:
+                logging.error("   行%s: %s", line, reason)
+            if len(input_issues) > 10:
+                logging.error("   ... 共%s处", len(input_issues))
+        else:
+            logging.info("输入数据模型校验通过 (PanelRow)")
 
     # 1. 唯一性检查
     dupes = check_uniqueness(rows, key_cols)
@@ -166,7 +193,7 @@ def main() -> None:
     print_coverage(rows, all_cols)
 
     # 返回码
-    if dupes or issues or unit_issues:
+    if input_issues or dupes or issues or unit_issues:
         sys.exit(1)
 
 

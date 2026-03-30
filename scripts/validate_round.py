@@ -17,7 +17,11 @@ import csv
 import logging
 import sys
 from collections import Counter
+from collections.abc import Callable
 
+from pydantic import ValidationError
+
+from tools.models import parse_panel_row, parse_source_record
 from tools.qc_checker import check_required, check_uniqueness, check_unit
 
 
@@ -30,6 +34,16 @@ def has_value(row: dict, value_cols: list[str] | None) -> bool:
     if not value_cols:
         return True
     return any(bool((row.get(c) or "").strip()) for c in value_cols)
+
+
+def validate_rows(rows: list[dict[str, str]], parser: Callable[[dict[str, str]], object]) -> list[tuple[int, str]]:
+    issues: list[tuple[int, str]] = []
+    for index, row in enumerate(rows, start=2):
+        try:
+            parser(row)
+        except ValidationError as exc:
+            issues.append((index, str(exc.errors()[0].get("msg", "invalid row"))))
+    return issues
 
 
 def main():
@@ -63,6 +77,24 @@ def main():
     logging.info("台账行数: %s", len(reg_rows))
 
     failed = False
+
+    panel_model_issues = validate_rows(data_rows, parse_panel_row)
+    if panel_model_issues:
+        failed = True
+        logging.error("数据CSV模型校验失败: %s 条", len(panel_model_issues))
+        for line, reason in panel_model_issues[:10]:
+            logging.error("  行%s: %s", line, reason)
+    else:
+        logging.info("数据CSV模型校验通过 (PanelRow)")
+
+    source_model_issues = validate_rows(reg_rows, parse_source_record)
+    if source_model_issues:
+        failed = True
+        logging.error("来源台账模型校验失败: %s 条", len(source_model_issues))
+        for line, reason in source_model_issues[:10]:
+            logging.error("  行%s: %s", line, reason)
+    else:
+        logging.info("来源台账模型校验通过 (SourceRecord)")
 
     # 1) 主键唯一性
     dupes = check_uniqueness(data_rows, key_cols)
