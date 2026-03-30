@@ -19,12 +19,14 @@ import argparse
 import json
 import logging
 import os
+import secrets
 import shlex
 import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+MAX_REQUEST_BODY_BYTES = 1_048_576
 
 
 def run_script(script_name: str, args: list[str]) -> dict:
@@ -122,6 +124,9 @@ def args_list_to_payload(args: list[str]) -> dict:
 
 
 class AgentHandler(BaseHTTPRequestHandler):
+    required_api_key: str = ""
+    max_request_body_bytes: int = MAX_REQUEST_BODY_BYTES
+
     def _send_json(self, code: int, body: dict):
         raw = json.dumps(body, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
@@ -130,20 +135,44 @@ class AgentHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def _authorized(self) -> bool:
+        if not self.required_api_key:
+            return True
+        auth = (self.headers.get("Authorization") or "").strip()
+        return auth == f"Bearer {self.required_api_key}"
+
+    def _require_auth(self) -> bool:
+        if self._authorized():
+            return True
+        self._send_json(401, {"ok": False, "error": "unauthorized"})
+        return False
+
     def _read_json(self) -> dict:
-        length = int(self.headers.get("Content-Length", "0"))
+        length_header = self.headers.get("Content-Length", "0")
+        try:
+            length = int(length_header)
+        except ValueError as e:
+            raise ValueError(f"invalid Content-Length: {length_header!r}") from e
         if length <= 0:
             return {}
+        if length > self.max_request_body_bytes:
+            raise ValueError(f"payload too large: {length} bytes (max {self.max_request_body_bytes})")
         raw = self.rfile.read(length)
+        if len(raw) > self.max_request_body_bytes:
+            raise ValueError(f"payload too large: {len(raw)} bytes (max {self.max_request_body_bytes})")
         return json.loads(raw.decode("utf-8"))
 
     def do_GET(self):
+        if not self._require_auth():
+            return
         if self.path == "/health":
             self._send_json(200, {"ok": True, "service": "academic-data-hunter-agent-hub"})
             return
         self._send_json(404, {"ok": False, "error": "not found"})
 
     def do_POST(self):
+        if not self._require_auth():
+            return
         try:
             payload = self._read_json()
         except Exception as e:
@@ -240,9 +269,14 @@ class AgentHandler(BaseHTTPRequestHandler):
         self._send_json(404, {"ok": False, "error": "not found"})
 
 
-def serve(host: str, port: int):
+def serve(host: str, port: int, api_key: str):
+    AgentHandler.required_api_key = (api_key or "").strip()
+    if not AgentHandler.required_api_key:
+        AgentHandler.required_api_key = secrets.token_urlsafe(24)
+        logging.warning("No --api-key provided, generated ephemeral API key: %s", AgentHandler.required_api_key)
     server = ThreadingHTTPServer((host, port), AgentHandler)
     logging.info("Agent API running at http://%s:%s", host, port)
+    logging.info("Auth: enabled (Authorization: Bearer <api-key>)")
     logging.info(
         "Endpoints: GET /health, POST /run-round, /validate-round, "
         "/auto-rounds, /plan-workflow, /plan-auto-rounds, /qc-case01"
@@ -324,12 +358,17 @@ def main():
     p_serve = sub.add_parser("serve", help="启动API服务")
     p_serve.add_argument("--host", default="127.0.0.1")
     p_serve.add_argument("--port", type=int, default=8787)
+    p_serve.add_argument(
+        "--api-key",
+        default=os.environ.get("AGENT_HUB_API_KEY", ""),
+        help="API鉴权密钥（请求头需传 Authorization: Bearer <key>）",
+    )
 
     sub.add_parser("chat", help="启动交互式模式")
 
     args = parser.parse_args()
     if args.mode == "serve":
-        serve(args.host, args.port)
+        serve(args.host, args.port, args.api_key)
     elif args.mode == "chat":
         chat()
 

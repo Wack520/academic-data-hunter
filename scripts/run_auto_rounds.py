@@ -50,13 +50,11 @@ def parse_csv_list(raw: str) -> list[str]:
 
 
 def run_command(cmd: Iterable[str] | str, cwd: str, shell: bool = False) -> int:
+    cmd_list = shlex.split(cmd) if isinstance(cmd, str) else list(cmd)
     if shell:
-        logging.info("[CMD] %s", cmd)
-        result = subprocess.run(cmd, cwd=cwd, shell=True)
-    else:
-        cmd_list = list(cmd)
-        logging.info("[CMD] %s", " ".join(shlex.quote(x) for x in cmd_list))
-        result = subprocess.run(cmd_list, cwd=cwd)
+        logging.debug("run_command(shell=True) is deprecated; command is executed with shell=False")
+    logging.info("[CMD] %s", " ".join(shlex.quote(x) for x in cmd_list))
+    result = subprocess.run(cmd_list, cwd=cwd)
     return result.returncode
 
 
