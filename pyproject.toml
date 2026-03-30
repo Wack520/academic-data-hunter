@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "academic-data-hunter"
+version = "0.1.0"
+description = "AI-agent assisted toolkit for auditable academic data collection workflows"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "academic-data-hunter contributors" }
+]
+dependencies = [
+  "requests>=2.32,<3.0",
+  "beautifulsoup4>=4.14,<5.0",
+  "camoufox>=0.4.11,<0.5",
+  "pandas>=3.0,<4.0",
+  "openpyxl>=3.1,<4.0",
+  "urllib3>=2.6,<3.0",
+  "lxml>=5.2,<6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0,<9.0",
+]
