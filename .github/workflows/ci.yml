@@ -18,6 +18,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Validate lockfile target Python
+        run: grep -q "with Python 3.11" requirements-lock.txt
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
