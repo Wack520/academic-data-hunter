@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Case03 严格补采（Round3）：补齐 2024 年剩余省份常住人口。
 
@@ -15,7 +14,6 @@ import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Dict, List
 
 import requests
 import urllib3
@@ -46,7 +44,7 @@ class SourceSpec:
     use_camoufox: bool = False
 
 
-SPECS: List[SourceSpec] = [
+SPECS: list[SourceSpec] = [
     SourceSpec(
         province="天津市",
         source_id="SRC_CASE03_POP2024_R3_TJ",
@@ -248,12 +246,12 @@ def parse_value(text: str, regex: str) -> tuple[str, str]:
     return value, evidence
 
 
-def load_csv(path: Path) -> List[Dict]:
+def load_csv(path: Path) -> list[dict]:
     with path.open("r", encoding="utf-8-sig") as f:
         return list(csv.DictReader(f))
 
 
-def save_csv(path: Path, rows: List[Dict], fieldnames: List[str]) -> None:
+def save_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
@@ -268,7 +266,7 @@ def main() -> None:
     today = date.today().isoformat()
 
     panel_map = {(r["province"], r["year"]): r for r in panel}
-    evidence_rows: List[Dict] = []
+    evidence_rows: list[dict] = []
 
     ok = 0
     skipped = 0
@@ -318,7 +316,7 @@ def main() -> None:
                 except Exception:
                     text = fetch_text_camoufox(spec.source_url)
             value, evidence = parse_value(text, spec.regex)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             failed += 1
             err = str(e)
             evidence_rows.append(

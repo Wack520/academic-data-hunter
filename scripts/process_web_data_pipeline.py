@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 通用网页数据处理管线（借鉴 ScrapeGraphAI 的“处理分层”思路）：
 1) markdown-like 内容归档（低成本、可审计）
@@ -20,12 +19,10 @@ import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
 from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
-
 
 UA = {
     "User-Agent": (
@@ -38,7 +35,7 @@ UA = {
 @dataclass
 class FieldRule:
     name: str
-    patterns: List[str]
+    patterns: list[str]
     cast: str = "str"  # str|float|int
     unit: str = ""
 
@@ -57,7 +54,7 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def load_urls_from_discover(path: Path) -> List[str]:
+def load_urls_from_discover(path: Path) -> list[str]:
     data = json.loads(path.read_text(encoding="utf-8"))
     urls = []
     if not isinstance(data, dict):
@@ -79,7 +76,7 @@ def load_urls_from_discover(path: Path) -> List[str]:
     return urls
 
 
-def load_urls_from_file(path: Path) -> List[str]:
+def load_urls_from_file(path: Path) -> list[str]:
     out = []
     for line in path.read_text(encoding="utf-8").splitlines():
         u = line.strip()
@@ -90,7 +87,7 @@ def load_urls_from_file(path: Path) -> List[str]:
     return out
 
 
-def dedup_keep_order(arr: List[str]) -> List[str]:
+def dedup_keep_order(arr: list[str]) -> list[str]:
     seen = set()
     out = []
     for x in arr:
@@ -109,14 +106,14 @@ def fetch_html(url: str, timeout_sec: int, retry: int) -> str:
             r.raise_for_status()
             r.encoding = r.apparent_encoding or "utf-8"
             return r.text
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             last = e
             if i < retry:
                 time.sleep(0.5 * (i + 1))
     raise RuntimeError(f"fetch failed: {last}")
 
 
-def html_to_markdown_like(html: str) -> Dict[str, str]:
+def html_to_markdown_like(html: str) -> dict[str, str]:
     soup = BeautifulSoup(html, "html.parser")
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
@@ -158,10 +155,10 @@ def html_to_markdown_like(html: str) -> Dict[str, str]:
     }
 
 
-def load_schema(path: Path) -> List[FieldRule]:
+def load_schema(path: Path) -> list[FieldRule]:
     data = json.loads(path.read_text(encoding="utf-8"))
     arr = data.get("fields", []) if isinstance(data, dict) else []
-    out: List[FieldRule] = []
+    out: list[FieldRule] = []
     for it in arr:
         if not isinstance(it, dict):
             continue
@@ -188,7 +185,7 @@ def cast_value(raw: str, cast: str):
     return raw
 
 
-def extract_by_schema(text: str, rules: List[FieldRule]) -> Dict[str, Dict]:
+def extract_by_schema(text: str, rules: list[FieldRule]) -> dict[str, dict]:
     out = {}
     for rule in rules:
         got = None
@@ -220,7 +217,7 @@ def main() -> None:
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    urls: List[str] = []
+    urls: list[str] = []
     if args.input_json:
         p = Path(args.input_json)
         if p.exists():
@@ -235,7 +232,7 @@ def main() -> None:
         logging.info("no urls")
         return
 
-    rules: List[FieldRule] = []
+    rules: list[FieldRule] = []
     if args.schema_file:
         sp = Path(args.schema_file)
         if sp.exists():
@@ -302,7 +299,7 @@ def main() -> None:
                         + "\n"
                     )
             ok += 1
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             rec["status"] = "error"
             rec["error"] = str(e)[:220]
         rows.append(rec)

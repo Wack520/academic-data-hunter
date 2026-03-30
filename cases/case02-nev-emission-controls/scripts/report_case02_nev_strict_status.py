@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Case02 严格口径（NEV）状态汇总：
 - strict 面板覆盖率
@@ -14,7 +13,6 @@ import csv
 import json
 import re
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[3]
 CASE_DIR = ROOT / "cases" / "case02-nev-emission-controls"
@@ -72,7 +70,7 @@ def render_report(
 
     try:
         data = json.loads(cand_path.read_text(encoding="utf-8"))
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         lines.append(f"> 候选文件读取失败：{e}")
         return "\n".join(lines)
 
@@ -95,10 +93,7 @@ def render_report(
             sent = re.sub(r"[\ue000-\uf8ff]", "", sent)
             if len(sent) > 96:
                 sent = sent[:96] + "..."
-            lines.append(
-                f"- {i}) score={c.get('score')} value_10k={c.get('value_10k')} "
-                f"url={c.get('url')} | {sent}"
-            )
+            lines.append(f"- {i}) score={c.get('score')} value_10k={c.get('value_10k')} url={c.get('url')} | {sent}")
         lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"

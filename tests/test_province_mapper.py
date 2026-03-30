@@ -24,5 +24,5 @@ def test_normalize_invalid_province_and_target():
 
 @pytest.mark.parametrize("bad_input", [None, 123])
 def test_normalize_abnormal_input_raises(bad_input):
-    with pytest.raises(Exception):
+    with pytest.raises((AttributeError, TypeError, ValueError)):
         normalize(bad_input, "short")

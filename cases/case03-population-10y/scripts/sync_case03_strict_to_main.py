@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 将 case03 的严格部分面板同步回主面板（仅更新 2024 年）。
 """
@@ -8,7 +7,6 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[3]
 CASE_DIR = ROOT / "cases" / "case03-population-10y"
@@ -117,4 +115,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

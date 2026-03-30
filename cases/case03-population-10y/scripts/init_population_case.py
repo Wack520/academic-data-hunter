@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 快速初始化“人口数据”案例骨架。
 """
@@ -10,7 +9,6 @@ import argparse
 import csv
 import sys
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -121,11 +119,7 @@ def main() -> None:
     )
 
     prog_md.write_text(
-        (
-            "# 进度汇报\n\n"
-            f"- 初始化完成：{len(rows)} 行骨架\n"
-            "- 已填充：0\n"
-        ),
+        (f"# 进度汇报\n\n- 初始化完成：{len(rows)} 行骨架\n- 已填充：0\n"),
         encoding="utf-8",
     )
 

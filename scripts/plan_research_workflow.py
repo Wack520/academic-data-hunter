@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Planner：将变量清单自动路由到执行链路（借鉴 GPT-Researcher 的 planner 思路）。
 
@@ -15,7 +14,6 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
 
 
 @dataclass
@@ -35,7 +33,7 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def load_spec(path: Path) -> Dict:
+def load_spec(path: Path) -> dict:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError("spec root must be object")
@@ -61,8 +59,8 @@ def classify_route(v: VariableItem) -> str:
     return "web_search"
 
 
-def build_plan(spec: Dict) -> Dict:
-    vars_in: List[VariableItem] = []
+def build_plan(spec: dict) -> dict:
+    vars_in: list[VariableItem] = []
     for it in spec.get("variables", []):
         if not isinstance(it, dict):
             continue
@@ -77,7 +75,7 @@ def build_plan(spec: Dict) -> Dict:
         )
 
     routed = []
-    groups: Dict[str, List[Dict]] = defaultdict(list)
+    groups: dict[str, list[dict]] = defaultdict(list)
     for v in vars_in:
         route = classify_route(v)
         row = {
@@ -140,28 +138,25 @@ def build_plan(spec: Dict) -> Dict:
                 "生成 panel + source_registry + search_log",
             ],
             "missing_policy": "strict留空" if strict else "可估算但需单独标注",
-            "interpolation": False if strict else True,
+            "interpolation": not strict,
             "deliverables": ["panel.csv/xlsx", "source_registry.csv", "progress-report.md"],
         },
     }
     return plan
 
 
-def render_md(plan: Dict) -> str:
-    lines: List[str] = []
+def render_md(plan: dict) -> str:
+    lines: list[str] = []
     lines.append("# 研究工作流计划（Planner 生成）")
     lines.append("")
-    lines.append(f"- 主题：{plan.get('topic','')}")
+    lines.append(f"- 主题：{plan.get('topic', '')}")
     scope = plan.get("scope", {})
-    lines.append(f"- 范围：{scope.get('geography','')} | {scope.get('time_range','')}")
+    lines.append(f"- 范围：{scope.get('geography', '')} | {scope.get('time_range', '')}")
     lines.append(f"- strict_mode：{scope.get('strict_mode')}")
     lines.append("")
     lines.append("## 1) Planner 路由结果")
     for r in plan.get("planner", {}).get("routing_result", []):
-        lines.append(
-            f"- `{r.get('name')}` / {r.get('name_cn')} -> **{r.get('route')}** "
-            f"(hint: {r.get('source_hint')})"
-        )
+        lines.append(f"- `{r.get('name')}` / {r.get('name_cn')} -> **{r.get('route')}** (hint: {r.get('source_hint')})")
     lines.append("")
     lines.append("## 2) Executor")
     ex = plan.get("executor", {})

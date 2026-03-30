@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 将 case03 的 2024 年短名单回填到“严格部分面板”（不覆盖主面板）。
 """
@@ -11,7 +10,6 @@ import csv
 from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
-
 
 ROOT = Path(__file__).resolve().parents[3]
 CASE_DIR = ROOT / "cases" / "case03-population-10y"
@@ -93,7 +91,7 @@ def main() -> None:
                 "access_date": today,
                 "evidence_file": "population_2024_shortlist_review.csv",
                 "is_primary": "0",
-                "note": f"{args.tag_note}; confidence={r.get('confidence','')}; query={r.get('search_query','')}",
+                "note": f"{args.tag_note}; confidence={r.get('confidence', '')}; query={r.get('search_query', '')}",
             }
         )
 

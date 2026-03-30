@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Case03 自动采集：30省年末常住人口（万人）
 - 来源：国家统计局 国家数据（data.stats.gov.cn）
@@ -14,20 +13,18 @@ import csv
 import json
 import re
 import subprocess
+import sys
 import tempfile
 import textwrap
 import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import requests
-import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tools"))
 from province_mapper import get_all_provinces  # noqa: E402
-
 
 BASE_URL = "https://data.stats.gov.cn"
 CASE_DIR = ROOT / "cases" / "case03-population-10y"
@@ -57,7 +54,7 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def _solve_challenge_js(js_text: str) -> Tuple[str, str]:
+def _solve_challenge_js(js_text: str) -> tuple[str, str]:
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
         js_file = td / "challenge.js"
@@ -141,7 +138,9 @@ def _request_with_challenge(session: requests.Session, url: str, max_rounds: int
     raise RuntimeError("challenge轮次超限")
 
 
-def fetch_population_nbs(session: requests.Session, code: str, year_start: int, year_end: int) -> Tuple[List[Dict], NBSMeta]:
+def fetch_population_nbs(
+    session: requests.Session, code: str, year_start: int, year_end: int
+) -> tuple[list[dict], NBSMeta]:
     year_range = f"{year_start}-{year_end}"
     params = {
         "m": "QueryData",
@@ -176,7 +175,7 @@ def fetch_population_nbs(session: requests.Session, code: str, year_start: int, 
     target_provs = set(get_all_provinces("full"))
     reg_map = {x.get("code"): x.get("cname", x.get("name", "")) for x in reg_nodes}
 
-    rows: List[Dict] = []
+    rows: list[dict] = []
     for dn in rd.get("datanodes", []):
         wds = {w.get("wdcode"): w.get("valuecode") for w in dn.get("wds", [])}
         reg = wds.get("reg")
@@ -201,14 +200,14 @@ def fetch_population_nbs(session: requests.Session, code: str, year_start: int, 
                 "resident_population_10k_person": val,
             }
         )
-    dedup: Dict[Tuple[str, int], Dict] = {}
+    dedup: dict[tuple[str, int], dict] = {}
     for r in rows:
         dedup[(r["province"], int(r["year"]))] = r
     out = sorted(dedup.values(), key=lambda x: (x["province"], int(x["year"])))
     return out, meta
 
 
-def write_raw_nbs(rows: List[Dict]) -> None:
+def write_raw_nbs(rows: list[dict]) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     with NBS_RAW_PATH.open("w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["province", "year", "resident_population_10k_person"])
@@ -216,7 +215,7 @@ def write_raw_nbs(rows: List[Dict]) -> None:
         w.writerows(rows)
 
 
-def load_local_fallback(year_start: int, year_end: int) -> Tuple[List[Dict], NBSMeta]:
+def load_local_fallback(year_start: int, year_end: int) -> tuple[list[dict], NBSMeta]:
     local = ROOT / "cases" / "case02-nev-emission-controls" / "data" / "nbs_resident_population_10k_person.csv"
     if not local.exists():
         raise FileNotFoundError(f"fallback file missing: {local}")
@@ -248,7 +247,7 @@ def load_local_fallback(year_start: int, year_end: int) -> Tuple[List[Dict], NBS
     return rows, meta
 
 
-def update_panel(rows: List[Dict], meta: NBSMeta) -> Tuple[int, int]:
+def update_panel(rows: list[dict], meta: NBSMeta) -> tuple[int, int]:
     panel = list(csv.DictReader(PANEL_PATH.open("r", encoding="utf-8-sig")))
     today = __import__("datetime").date.today().isoformat()
     m = {(r["province"], int(r["year"])): r for r in rows}
@@ -348,7 +347,7 @@ def update_reports(year_start: int, year_end: int, filled: int) -> None:
             "## 当前进度\n\n"
             f"- 面板骨架：`{total}/{total}` 行\n"
             f"- 已填充：`{filled}/{total}`\n"
-            f"- 覆盖率：`{(filled/total*100 if total else 0):.1f}%`\n\n"
+            f"- 覆盖率：`{(filled / total * 100 if total else 0):.1f}%`\n\n"
             "## 下一步\n\n"
             "- 若存在缺口，按 next-round-task.md 逐轮补缺。\n"
         ),

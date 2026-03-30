@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 严格口径（官方原文）补采：NEV 保有量（当前轮次：部分省份）
 
@@ -8,6 +7,7 @@
 - 仅写入明确年份（当前写入 2023 年）；
 - 不插值、不外推。
 """
+
 from __future__ import annotations
 
 import csv
@@ -16,13 +16,11 @@ import time
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import requests
 import urllib3
 from bs4 import BeautifulSoup
 from requests.exceptions import SSLError
-
 
 ROOT = Path(__file__).resolve().parents[3]
 CASE_DIR = ROOT / "cases" / "case02-nev-emission-controls"
@@ -45,10 +43,10 @@ class NevSource:
     regex: str
     note: str
     scale_to_10k: float = 1.0
-    backup_urls: Optional[List[str]] = None
+    backup_urls: list[str] | None = None
 
 
-SOURCES: List[NevSource] = [
+SOURCES: list[NevSource] = [
     NevSource(
         province="北京市",
         year=2023,
@@ -300,8 +298,8 @@ def _fetch_once(url: str) -> str:
     return text
 
 
-def fetch_text(urls: List[str], retries: int = 3) -> str:
-    last_err: Optional[Exception] = None
+def fetch_text(urls: list[str], retries: int = 3) -> str:
+    last_err: Exception | None = None
     dedup = []
     seen = set()
     for u in urls:
@@ -319,22 +317,19 @@ def fetch_text(urls: List[str], retries: int = 3) -> str:
     raise RuntimeError(f"all urls failed after retries, last_error={last_err}")
 
 
-def extract_value_and_evidence(text: str, pattern: str) -> Optional[tuple[float, str]]:
+def extract_value_and_evidence(text: str, pattern: str) -> tuple[float, str] | None:
     m = re.search(pattern, text)
     if not m:
         return None
     val = float(m.group(1))
     frag = re.sub(r"\s+", " ", m.group(0)).strip()
     k = frag.find("新能源汽车保有量")
-    if k >= 0:
-        evidence = frag[max(0, k - 28) : min(len(frag), k + 40)]
-    else:
-        evidence = frag
+    evidence = frag[max(0, k - 28) : min(len(frag), k + 40)] if k >= 0 else frag
     evidence = evidence.strip(" ，,。;；")
     return val, evidence
 
 
-def write_partial_csv(rows: List[Dict]) -> None:
+def write_partial_csv(rows: list[dict]) -> None:
     fields = [
         "province",
         "year",
@@ -352,8 +347,8 @@ def write_partial_csv(rows: List[Dict]) -> None:
         w.writerows(rows)
 
 
-def merge_with_existing_rows(new_rows: List[Dict]) -> List[Dict]:
-    merged: Dict[tuple[str, int], Dict] = {}
+def merge_with_existing_rows(new_rows: list[dict]) -> list[dict]:
+    merged: dict[tuple[str, int], dict] = {}
     if NEV_OUT.exists():
         for r in csv.DictReader(NEV_OUT.open("r", encoding="utf-8-sig")):
             key = ((r.get("province") or "").strip(), int((r.get("year") or "0").strip() or 0))
@@ -365,7 +360,7 @@ def merge_with_existing_rows(new_rows: List[Dict]) -> List[Dict]:
     return sorted(merged.values(), key=lambda x: (x["province"], int(x["year"])))
 
 
-def update_panel(rows: List[Dict]) -> None:
+def update_panel(rows: list[dict]) -> None:
     panel = list(csv.DictReader(PANEL_PATH.open("r", encoding="utf-8-sig")))
     idx = {(r["province"], int(r["year"])): r for r in panel}
     for row in rows:
@@ -379,7 +374,7 @@ def update_panel(rows: List[Dict]) -> None:
         w.writerows(panel)
 
 
-def update_source_registry(rows: List[Dict]) -> None:
+def update_source_registry(rows: list[dict]) -> None:
     reg_rows = list(csv.DictReader(REG_PATH.open("r", encoding="utf-8-sig")))
     exists = {r["source_id"] for r in reg_rows}
     access_date = date.today().isoformat()
@@ -424,7 +419,7 @@ def summarize_panel_2023() -> None:
 
 def main() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    out_rows: List[Dict] = []
+    out_rows: list[dict] = []
 
     for src in SOURCES:
         try:

@@ -1,34 +1,31 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Case02 自动采集脚本：
 - 从国家统计局 data.stats.gov.cn 抓取 30省 2012-2023 控制变量
 - 合并本地 NEV 保有量
 - 基于油耗估算交通碳排放
 """
+
 from __future__ import annotations
 
 import json
 import re
 import subprocess
+import sys
 import tempfile
 import textwrap
 import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import pandas as pd
 import requests
 
-
 ROOT = Path(__file__).resolve().parents[3]
 TOOLS_DIR = ROOT / "tools"
-import sys
 
 sys.path.insert(0, str(TOOLS_DIR))
 from province_mapper import get_all_provinces, normalize  # noqa: E402
-
 
 BASE_URL = "https://data.stats.gov.cn"
 CASE_DIR = ROOT / "cases" / "case02-nev-emission-controls"
@@ -58,7 +55,7 @@ class NBSMeta:
     source_url: str
 
 
-def _solve_challenge_js(js_text: str) -> Tuple[str, str]:
+def _solve_challenge_js(js_text: str) -> tuple[str, str]:
     """执行反爬JS，得到下一跳URL与cookie。"""
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
@@ -148,7 +145,7 @@ def _request_with_challenge(session: requests.Session, url: str, max_rounds: int
     raise RuntimeError("challenge轮次超限")
 
 
-def fetch_nbs_variable(session: requests.Session, code: str, value_col: str) -> Tuple[pd.DataFrame, NBSMeta]:
+def fetch_nbs_variable(session: requests.Session, code: str, value_col: str) -> tuple[pd.DataFrame, NBSMeta]:
     params = {
         "m": "QueryData",
         "dbcode": "fsnd",
@@ -177,7 +174,7 @@ def fetch_nbs_variable(session: requests.Session, code: str, value_col: str) -> 
     )
 
     reg_map = {x.get("code"): x.get("cname", x.get("name", "")) for x in reg_nodes}
-    rows: List[Dict] = []
+    rows: list[dict] = []
     for dn in rd.get("datanodes", []):
         wds = {w.get("wdcode"): w.get("valuecode") for w in dn.get("wds", [])}
         reg = wds.get("reg")
@@ -206,8 +203,8 @@ def main() -> None:
 
     # 1) 拉取NBS变量
     session = requests.Session()
-    nbs_metas: Dict[str, NBSMeta] = {}
-    nbs_frames: List[pd.DataFrame] = []
+    nbs_metas: dict[str, NBSMeta] = {}
+    nbs_frames: list[pd.DataFrame] = []
 
     for value_col, code, _label in NBS_SPECS:
         print(f"[NBS] fetching {value_col} <- {code}")
@@ -228,15 +225,9 @@ def main() -> None:
         panel = panel.merge(df, on=["province", "year"], how="left")
 
     # 3) 衍生控制变量
-    panel["gdp_per_capita_yuan"] = (
-        panel["gdp_100m_cny"] * 10000 / panel["resident_population_10k_person"]
-    )
-    panel["urbanization_rate"] = (
-        panel["urban_population_10k_person"] / panel["resident_population_10k_person"]
-    )
-    panel["tertiary_share"] = (
-        panel["tertiary_value_added_100m_cny"] / panel["gdp_100m_cny"]
-    )
+    panel["gdp_per_capita_yuan"] = panel["gdp_100m_cny"] * 10000 / panel["resident_population_10k_person"]
+    panel["urbanization_rate"] = panel["urban_population_10k_person"] / panel["resident_population_10k_person"]
+    panel["tertiary_share"] = panel["tertiary_value_added_100m_cny"] / panel["gdp_100m_cny"]
 
     # 4) 合并 NEV 保有量（本地已有结果）
     nev_path = ROOT.parent / "math" / "data_collector" / "output" / "nev_stock_30prov_2012_2023.csv"
@@ -244,9 +235,7 @@ def main() -> None:
         raise FileNotFoundError(f"缺少NEV文件: {nev_path}")
     nev_df = pd.read_csv(nev_path)
     nev_df["province"] = nev_df["province"].map(lambda x: normalize(str(x), "full"))
-    nev_df = nev_df.rename(columns={"nev_stock_10k": "nev_stock_10k"})[
-        ["province", "year", "nev_stock_10k"]
-    ]
+    nev_df = nev_df.rename(columns={"nev_stock_10k": "nev_stock_10k"})[["province", "year", "nev_stock_10k"]]
     panel = panel.merge(nev_df, on=["province", "year"], how="left")
 
     # 5) 估算交通碳排放（优先使用含filled油耗的合并面板）
@@ -276,8 +265,7 @@ def main() -> None:
         )
     # 系数近似：汽油2.925、柴油3.096 tCO2 / t燃料
     fuel_df["transport_co2_est_10k_ton"] = (
-        fuel_df["gasoline_consumption_10k_ton"] * 2.925
-        + fuel_df["diesel_consumption_10k_ton"] * 3.096
+        fuel_df["gasoline_consumption_10k_ton"] * 2.925 + fuel_df["diesel_consumption_10k_ton"] * 3.096
     )
     panel = panel.merge(
         fuel_df[["province", "year", "transport_co2_est_10k_ton"]],

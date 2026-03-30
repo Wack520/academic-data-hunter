@@ -91,10 +91,7 @@ def main():
 
     # 3) 单位检查（可选）
     if args.check_unit:
-        if value_cols:
-            unit_issues = check_unit(data_rows, value_cols, args.check_unit)
-        else:
-            unit_issues = []
+        unit_issues = check_unit(data_rows, value_cols, args.check_unit) if value_cols else []
         if unit_issues:
             failed = True
             logging.error("单位检查失败: %s 处", len(unit_issues))
@@ -137,7 +134,8 @@ def main():
         if (r.get("source_level") or "").strip() == "C":
             # 找到匹配registry行，判断 cross_check_url
             matched = [
-                rr for rr in reg_filtered
+                rr
+                for rr in reg_filtered
                 if (rr.get("source_level") or "").strip() == k[0]
                 and (rr.get("source_name") or "").strip() == k[1]
                 and (rr.get("source_url") or "").strip() == k[2]
@@ -150,7 +148,9 @@ def main():
             if not sid:
                 source_id_issues.append((idx, r.get("province", "?"), r.get("year", "?"), "缺少source_id"))
             elif sid not in reg_source_ids:
-                source_id_issues.append((idx, r.get("province", "?"), r.get("year", "?"), f"source_id未在registry找到: {sid}"))
+                source_id_issues.append(
+                    (idx, r.get("province", "?"), r.get("year", "?"), f"source_id未在registry找到: {sid}")
+                )
 
     if data_missing_in_reg:
         failed = True

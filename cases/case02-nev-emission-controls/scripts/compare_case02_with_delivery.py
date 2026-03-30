@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 对比 case02 输出 与 math/交付数据_30省面板_2012_2023 的差异，并产出 markdown 报告。
 """
@@ -96,4 +95,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

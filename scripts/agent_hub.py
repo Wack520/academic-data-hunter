@@ -32,7 +32,7 @@ def run_script(script_name: str, args: list[str]) -> dict:
         script_path = os.path.join(ROOT, script_name)
     else:
         script_path = os.path.join(ROOT, "scripts", script_name)
-    cmd = [sys.executable, script_path] + args
+    cmd = [sys.executable, script_path, *args]
     proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     return {
         "ok": proc.returncode == 0,
@@ -270,10 +270,14 @@ def chat():
         if line == "help":
             logging.info("示例:")
             logging.info("  run_round --data ... --value-col ... --year-start 2017 --year-end 2023 --output ...")
-            logging.info("  validate_round --data ... --registry ... --variable charging --value-col ... --check-unit 台")
+            logging.info(
+                "  validate_round --data ... --registry ... --variable charging --value-col ... --check-unit 台"
+            )
             logging.info("  auto_rounds --data ... --value-col ... --year-start 2017 --year-end 2023")
             logging.info("  plan_workflow --spec-file templates/research-spec-template.json")
-            logging.info("  plan_auto_rounds --spec-file ... --data ... --value-col ... --year-start ... --year-end ...")
+            logging.info(
+                "  plan_auto_rounds --spec-file ... --data ... --value-col ... --year-start ... --year-end ..."
+            )
             logging.info("  qc_case01")
             continue
 

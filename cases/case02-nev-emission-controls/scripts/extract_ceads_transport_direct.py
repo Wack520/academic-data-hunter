@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 从 CEADs「30个省份排放清单」Excel 批量抽取交通运输部门直接排放（Scope_1_Total）。
 
@@ -14,16 +13,14 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, List
 
 import pandas as pd
-
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_INPUT_DIR = ROOT / "cases" / "case02-nev-emission-controls" / "data" / "raw_ceads_sectoral_30prov"
 DEFAULT_OUTPUT = DEFAULT_INPUT_DIR / "ceads_transport_co2_direct_30prov_2012_2022.csv"
 
-ENG2CN: Dict[str, str] = {
+ENG2CN: dict[str, str] = {
     "Beijing": "北京市",
     "Tianjin": "天津市",
     "Hebei": "河北省",
@@ -58,13 +55,13 @@ ENG2CN: Dict[str, str] = {
 }
 
 
-def extract_one_file(xlsx_path: Path) -> List[dict]:
+def extract_one_file(xlsx_path: Path) -> list[dict]:
     m_year = re.search(r"(20\d{2})", xlsx_path.name)
     if not m_year:
         return []
     year = int(m_year.group(1))
 
-    rows: List[dict] = []
+    rows: list[dict] = []
     xl = pd.ExcelFile(xlsx_path)
     for sheet in xl.sheet_names:
         if sheet.upper() == "NOTE":
@@ -127,7 +124,7 @@ def main() -> None:
     if not files:
         raise FileNotFoundError(f"未找到输入文件: {in_dir}")
 
-    all_rows: List[dict] = []
+    all_rows: list[dict] = []
     for f in files:
         all_rows.extend(extract_one_file(f))
 
@@ -141,4 +138,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

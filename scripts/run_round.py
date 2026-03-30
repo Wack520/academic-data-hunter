@@ -22,7 +22,6 @@ import os
 import sys
 from collections import defaultdict
 
-
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
@@ -139,7 +138,7 @@ def build_markdown(
         lines.append("建议关键词模板：")
         lines.append("```")
         for tpl in keyword_templates:
-            lines.append(f"\"{render_keyword_template(tpl, y, keyword_name, value_col)}\"")
+            lines.append(f'"{render_keyword_template(tpl, y, keyword_name, value_col)}"')
         lines.append("```")
         lines.append("")
 

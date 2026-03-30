@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 使用 Camoufox 批量搜索 Case02 严格口径 NEV 缺失省份候选来源（增强版）。
 
@@ -16,6 +15,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import json
 import os
@@ -28,13 +28,12 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
 from camoufox.sync_api import Camoufox
-
 
 ROOT = Path(__file__).resolve().parents[3]
 CASE_DIR = ROOT / "cases" / "case02-nev-emission-controls"
@@ -122,12 +121,12 @@ OTHER_PROV_HINTS = [
     "新疆",
 ]
 
-PAGE_TEXT_CACHE: Dict[str, str] = {}
-PAGE_ERR_CACHE: Dict[str, str] = {}
+PAGE_TEXT_CACHE: dict[str, str] = {}
+PAGE_ERR_CACHE: dict[str, str] = {}
 PAGE_CACHE_LOCK = threading.Lock()
 
 
-def load_config_defaults(path: str) -> Dict[str, Any]:
+def load_config_defaults(path: str) -> dict[str, Any]:
     if not path:
         return {}
     p = Path(path)
@@ -227,11 +226,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--force", action="store_true", help="忽略断点信息，强制重跑")
     args = p.parse_args()
     if not args.tavily_api_key:
-        args.tavily_api_key = (
-            os.environ.get("TAVILY_API_KEY")
-            or os.environ.get("TAVILY_KEY")
-            or ""
-        )
+        args.tavily_api_key = os.environ.get("TAVILY_API_KEY") or os.environ.get("TAVILY_KEY") or ""
     args.fetch_workers = max(1, int(args.fetch_workers))
     args.province_workers = max(1, int(args.province_workers))
     args.per_domain_cap = max(0, int(args.per_domain_cap))
@@ -248,7 +243,7 @@ def resolve_headless_mode(args: argparse.Namespace):
     return False
 
 
-def parse_engines(raw: str) -> List[str]:
+def parse_engines(raw: str) -> list[str]:
     arr = [x.strip().lower() for x in (raw or "").split(",") if x.strip()]
     if not arr:
         return ["google", "tavily", "bing", "sogou", "360"]
@@ -258,14 +253,14 @@ def parse_engines(raw: str) -> List[str]:
     return arr
 
 
-def parse_domain_filter(raw: str) -> List[str]:
+def parse_domain_filter(raw: str) -> list[str]:
     return [x.strip().lower() for x in (raw or "").split(",") if x.strip()]
 
 
 def extract_domain(url: str) -> str:
     try:
         return (urlparse(url).hostname or "").lower()
-    except Exception:  # noqa: BLE001
+    except Exception:
         return ""
 
 
@@ -283,14 +278,14 @@ def score_domain_quality(url: str) -> int:
     return score
 
 
-def cap_urls_by_domain(rows: List[Dict], max_pages: int, per_domain_cap: int) -> List[Dict]:
+def cap_urls_by_domain(rows: list[dict], max_pages: int, per_domain_cap: int) -> list[dict]:
     if max_pages <= 0:
         return []
     if per_domain_cap <= 0:
         return rows[:max_pages]
-    selected: List[Dict] = []
-    skipped: List[Dict] = []
-    domain_counter: Dict[str, int] = defaultdict(int)
+    selected: list[dict] = []
+    skipped: list[dict] = []
+    domain_counter: dict[str, int] = defaultdict(int)
     for row in rows:
         domain = extract_domain(row.get("url", ""))
         if domain and domain_counter[domain] >= per_domain_cap:
@@ -310,14 +305,14 @@ def cap_urls_by_domain(rows: List[Dict], max_pages: int, per_domain_cap: int) ->
     return selected
 
 
-def load_missing_provinces(year: int) -> List[str]:
+def load_missing_provinces(year: int) -> list[str]:
     rows = list(csv.DictReader(PANEL_PATH.open("r", encoding="utf-8-sig")))
     r = [x for x in rows if (x.get("year") or "").strip() == str(year)]
     miss = sorted([x["province"] for x in r if not (x.get("nev_stock_10k") or "").strip()])
     return miss
 
 
-def split_sentences(text: str) -> List[str]:
+def split_sentences(text: str) -> list[str]:
     text = re.sub(r"\s+", " ", text)
     arr = re.split(r"(?<=[。！？；])", text)
     return [x.strip() for x in arr if x.strip()]
@@ -334,31 +329,31 @@ def fetch_text(url: str, retries: int = 2, timeout_sec: int = 18) -> str:
             txt = BeautifulSoup(r.text, "html.parser").get_text(" ")
             txt = re.sub(r"\s+", " ", txt)
             return txt
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             last_err = e
             time.sleep(0.4)
     raise RuntimeError(f"fetch failed: {url}, err={last_err}")
 
 
-def save_json(path: Path, data: Dict) -> None:
+def save_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def load_existing_json(path: Path) -> Dict:
+def load_existing_json(path: Path) -> dict:
     if not path.exists():
         return {}
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
+    except Exception:
         return {}
 
 
-def extract_candidates(province: str, url: str, text: str) -> List[Dict]:
+def extract_candidates(province: str, url: str, text: str) -> list[dict]:
     alias = PROV_ALIAS.get(province, [province.replace("省", "").replace("市", "")])
     explicit_name = alias[0]
     url_l = url.lower()
-    out: List[Dict] = []
+    out: list[dict] = []
     for sent in split_sentences(text):
         if "保有量" not in sent:
             continue
@@ -430,7 +425,7 @@ def extract_candidates(province: str, url: str, text: str) -> List[Dict]:
     return out
 
 
-def dedup_candidates(cands: List[Dict]) -> List[Dict]:
+def dedup_candidates(cands: list[dict]) -> list[dict]:
     dedup = []
     used = set()
     for c in sorted(cands, key=lambda x: x["score"], reverse=True):
@@ -442,7 +437,7 @@ def dedup_candidates(cands: List[Dict]) -> List[Dict]:
     return dedup
 
 
-def build_queries(prov: str, year: int) -> List[str]:
+def build_queries(prov: str, year: int) -> list[str]:
     y = str(year)
     return [
         f"{prov} 截至{y}年底 新能源汽车 保有量 site:gov.cn",
@@ -453,7 +448,7 @@ def build_queries(prov: str, year: int) -> List[str]:
     ]
 
 
-def score_search_row(province: str, year: int, row: Dict) -> int:
+def score_search_row(province: str, year: int, row: dict) -> int:
     txt = f"{row.get('title', '')} {row.get('snippet', '')}"
     score = 0
     short = PROV_ALIAS.get(province, [province.replace("省", "").replace("市", "")])[0]
@@ -476,7 +471,7 @@ def score_search_row(province: str, year: int, row: Dict) -> int:
     return score
 
 
-def search_urls_with_sogou(page, query: str) -> Tuple[bool, List[Dict]]:
+def search_urls_with_sogou(page, query: str) -> tuple[bool, list[dict]]:
     url = "https://www.sogou.com/web?query=" + requests.utils.quote(query)
     page.goto(url, timeout=45000, wait_until="domcontentloaded")
     page.wait_for_timeout(random.randint(1200, 2000))
@@ -498,7 +493,7 @@ def search_urls_with_sogou(page, query: str) -> Tuple[bool, List[Dict]]:
     return anti, rows
 
 
-def search_urls_with_bing(page, query: str) -> List[Dict]:
+def search_urls_with_bing(page, query: str) -> list[dict]:
     url = "https://www.bing.com/search?q=" + requests.utils.quote(query)
     page.goto(url, timeout=45000, wait_until="domcontentloaded")
     page.wait_for_timeout(random.randint(900, 1600))
@@ -519,7 +514,9 @@ def search_urls_with_bing(page, query: str) -> List[Dict]:
     return rows
 
 
-def search_urls_with_google(page, query: str, max_results: int = 15, hl: str = "zh-CN", gl: str = "") -> Tuple[bool, List[Dict]]:
+def search_urls_with_google(
+    page, query: str, max_results: int = 15, hl: str = "zh-CN", gl: str = ""
+) -> tuple[bool, list[dict]]:
     q = requests.utils.quote(query)
     url = f"https://www.google.com/search?q={q}&num={max(1, min(max_results, 50))}&hl={hl}"
     if gl:
@@ -554,7 +551,7 @@ def search_urls_with_tavily(
     endpoint: str,
     max_results: int = 10,
     topic: str = "general",
-) -> List[Dict]:
+) -> list[dict]:
     if not api_key:
         return []
     payload = {
@@ -572,7 +569,7 @@ def search_urls_with_tavily(
         return []
     data = r.json()
     arr = data.get("results", []) if isinstance(data, dict) else []
-    out: List[Dict] = []
+    out: list[dict] = []
     for it in arr:
         if not isinstance(it, dict):
             continue
@@ -584,7 +581,7 @@ def search_urls_with_tavily(
     return out
 
 
-def search_urls_with_360(page, query: str) -> Tuple[bool, List[Dict]]:
+def search_urls_with_360(page, query: str) -> tuple[bool, list[dict]]:
     url = "https://www.so.com/s?q=" + requests.utils.quote(query)
     page.goto(url, timeout=45000, wait_until="domcontentloaded")
     page.wait_for_timeout(random.randint(900, 1500))
@@ -606,14 +603,14 @@ def search_urls_with_360(page, query: str) -> Tuple[bool, List[Dict]]:
     return False, rows
 
 
-def run_single_query(page, query: str, engines: List[str], args: argparse.Namespace) -> Tuple[List[Dict], Dict]:
+def run_single_query(page, query: str, engines: list[str], args: argparse.Namespace) -> tuple[list[dict], dict]:
     anti_stats = {"sogou": False, "360": False, "google": False}
-    all_rows: List[Dict] = []
-    hit_engines: List[str] = []
-    errors: List[Dict[str, str]] = []
+    all_rows: list[dict] = []
+    hit_engines: list[str] = []
+    errors: list[dict[str, str]] = []
     for engine in engines:
         try:
-            rows: List[Dict] = []
+            rows: list[dict] = []
             if engine == "sogou":
                 anti, rows = search_urls_with_sogou(page, query)
                 anti_stats["sogou"] = anti
@@ -650,11 +647,11 @@ def run_single_query(page, query: str, engines: List[str], args: argparse.Namesp
                     all_rows.append(item)
                 if args.engine_mode == "first":
                     break
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             errors.append({"engine": engine, "error": str(e)[:180]})
             continue
 
-    dedup_by_url: Dict[str, Dict] = {}
+    dedup_by_url: dict[str, dict] = {}
     order = 0
     for row in all_rows:
         u = (row.get("data_url") or "").strip()
@@ -666,8 +663,8 @@ def run_single_query(page, query: str, engines: List[str], args: argparse.Namesp
         if prev is None:
             dedup_by_url[u] = row
             continue
-        prev_len = len((prev.get("title") or "")) + len((prev.get("snippet") or ""))
-        cur_len = len((row.get("title") or "")) + len((row.get("snippet") or ""))
+        prev_len = len(prev.get("title") or "") + len(prev.get("snippet") or "")
+        cur_len = len(row.get("title") or "") + len(row.get("snippet") or "")
         if cur_len > prev_len:
             row["_order"] = int(prev.get("_order", row["_order"]))
             dedup_by_url[u] = row
@@ -688,7 +685,7 @@ def run_single_query(page, query: str, engines: List[str], args: argparse.Namesp
     }
 
 
-def scan_url_for_candidates(province: str, url: str, timeout_sec: int) -> List[Dict]:
+def scan_url_for_candidates(province: str, url: str, timeout_sec: int) -> list[dict]:
     with PAGE_CACHE_LOCK:
         if url in PAGE_TEXT_CACHE:
             return extract_candidates(province, url, PAGE_TEXT_CACHE[url])
@@ -699,7 +696,7 @@ def scan_url_for_candidates(province: str, url: str, timeout_sec: int) -> List[D
         with PAGE_CACHE_LOCK:
             PAGE_TEXT_CACHE[url] = txt
         return extract_candidates(province, url, txt)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         with PAGE_CACHE_LOCK:
             PAGE_ERR_CACHE[url] = str(e)
         raise
@@ -709,24 +706,24 @@ def process_single_province(
     browser,
     prov: str,
     args: argparse.Namespace,
-    engines: List[str],
+    engines: list[str],
     max_fetch_pages: int,
-    domain_filters: List[str],
-) -> Dict:
+    domain_filters: list[str],
+) -> dict:
     queries = build_queries(prov, args.year)
-    urls: List[str] = []
-    query_debug: List[Dict] = []
+    urls: list[str] = []
+    query_debug: list[dict] = []
     anti_count = 0
 
     ctx = browser.new_context()
     page = ctx.new_page()
     page.set_default_timeout(int(args.query_timeout_ms))
     try:
-        url_rows: Dict[str, Dict] = {}
+        url_rows: dict[str, dict] = {}
         for q in queries:
             try:
                 rows, dbg = run_single_query(page, q, engines, args)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 query_debug.append({"query": q, "error": str(e)[:180]})
                 if "Target page" in str(e) or "browser has been closed" in str(e):
                     break
@@ -774,7 +771,7 @@ def process_single_province(
             )
             try:
                 page.wait_for_timeout(random.randint(args.delay_min_ms, args.delay_max_ms))
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 query_debug.append({"query": q, "wait_error": str(e)[:180]})
                 if "Target page" in str(e) or "browser has been closed" in str(e):
                     break
@@ -787,16 +784,15 @@ def process_single_province(
         fetch_targets = selected[:max_fetch_pages]
         urls = [x["url"] for x in selected]
     finally:
-        try:
+        with contextlib.suppress(Exception):
             ctx.close()
-        except Exception:
-            pass
 
-    cands: List[Dict] = []
+    cands: list[dict] = []
     max_workers = max(1, int(args.fetch_workers))
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
         futures = {
-            ex.submit(scan_url_for_candidates, prov, item["url"], int(args.request_timeout_sec)): item for item in fetch_targets
+            ex.submit(scan_url_for_candidates, prov, item["url"], int(args.request_timeout_sec)): item
+            for item in fetch_targets
         }
         for fut in as_completed(futures):
             meta = futures[fut]
@@ -856,8 +852,8 @@ def main() -> None:
         print("[INFO] no provinces to process")
         return
 
-    result: Dict[str, Dict] = load_existing_json(out_path) if args.resume else {}
-    to_run: List[str] = []
+    result: dict[str, dict] = load_existing_json(out_path) if args.resume else {}
+    to_run: list[str] = []
     for prov in provinces:
         if args.force:
             to_run.append(prov)
@@ -906,12 +902,12 @@ def main() -> None:
 
     result_lock = threading.Lock()
 
-    def save_prov_result(prov_name: str, rec: Dict) -> None:
+    def save_prov_result(prov_name: str, rec: dict) -> None:
         with result_lock:
             result[prov_name] = rec
             save_json(out_path, result)
 
-    def worker_loop(worker_id: int, prov_list: List[str]) -> None:
+    def worker_loop(worker_id: int, prov_list: list[str]) -> None:
         if not prov_list:
             return
         worker_tag = f"W{worker_id}"
@@ -932,16 +928,14 @@ def main() -> None:
                             f"anti={rec.get('anti_spider_hits', 0)} candidates={rec.get('candidate_count', 0)}"
                         )
                         break
-                    except Exception as e:  # noqa: BLE001
+                    except Exception as e:
                         msg = str(e)
                         recoverable = "Target page" in msg or "browser has been closed" in msg
                         if recoverable and retried < 2:
                             retried += 1
                             print(f"  [WARN][{worker_tag}] browser crashed, restart and retry ({retried}/2)")
-                            try:
+                            with contextlib.suppress(Exception):
                                 browser_cm.__exit__(None, None, None)
-                            except Exception:
-                                pass
                             browser_cm = open_browser()
                             browser = browser_cm.__enter__()
                             continue
@@ -957,16 +951,14 @@ def main() -> None:
                         print(f"  [ERR][{worker_tag}] {prov}: {msg}")
                         break
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 browser_cm.__exit__(None, None, None)
-            except Exception:
-                pass
 
     province_workers = max(1, min(int(args.province_workers), len(to_run)))
     if province_workers <= 1:
         worker_loop(1, to_run)
     else:
-        buckets: List[List[str]] = [[] for _ in range(province_workers)]
+        buckets: list[list[str]] = [[] for _ in range(province_workers)]
         for idx, prov in enumerate(to_run):
             buckets[idx % province_workers].append(prov)
         with ThreadPoolExecutor(max_workers=province_workers) as ex:

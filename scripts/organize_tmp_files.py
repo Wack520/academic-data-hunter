@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 把仓库根目录散落的临时文件（_tmp_* / tmp_*）归档到 tmp/legacy。
 """
@@ -9,7 +8,6 @@ from __future__ import annotations
 import argparse
 import logging
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 

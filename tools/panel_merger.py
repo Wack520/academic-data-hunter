@@ -2,7 +2,9 @@
 面板数据合并工具
 用法: python panel_merger.py --base panel.csv --new data.csv --on province,year --map-province short-to-full
 """
+
 import argparse
+import contextlib
 import csv
 import logging
 import sys
@@ -10,17 +12,17 @@ import sys
 try:
     from province_mapper import normalize
 except ImportError:
-    sys.path.insert(0, '.')
+    sys.path.insert(0, ".")
     from province_mapper import normalize
 
 
 def load_csv(path):
-    with open(path, encoding='utf-8-sig') as f:
+    with open(path, encoding="utf-8-sig") as f:
         return list(csv.DictReader(f))
 
 
 def save_csv(rows, path, fieldnames):
-    with open(path, 'w', encoding='utf-8-sig', newline='') as f:
+    with open(path, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
         w.writerows(rows)
@@ -31,19 +33,17 @@ def merge_panel(base_rows, new_rows, key_cols, new_cols, province_target=None):
     # 建立新数据索引
     new_index = {}
     for r in new_rows:
-        prov = r.get('province', '')
+        prov = r.get("province", "")
         if province_target:
-            try:
+            with contextlib.suppress(ValueError):
                 prov = normalize(prov, province_target)
-            except ValueError:
-                pass
-        key = tuple([prov if k == 'province' else r.get(k, '') for k in key_cols])
+        key = tuple([prov if k == "province" else r.get(k, "") for k in key_cols])
         new_index[key] = r
 
     # 合并
     merged = 0
     for r in base_rows:
-        key = tuple(r.get(k, '') for k in key_cols)
+        key = tuple(r.get(k, "") for k in key_cols)
         match = new_index.get(key)
         if match:
             for col in new_cols:
@@ -56,24 +56,20 @@ def merge_panel(base_rows, new_rows, key_cols, new_cols, province_target=None):
 
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-    parser = argparse.ArgumentParser(description='面板数据合并工具')
-    parser.add_argument('--base', required=True, help='基础面板CSV')
-    parser.add_argument('--new', required=True, help='新数据CSV')
-    parser.add_argument('--on', default='province,year', help='连接键')
-    parser.add_argument('--cols', default=None, help='要合并的列(逗号分隔,默认取new中非键列)')
-    parser.add_argument('--map-province', default=None, 
-                        choices=['short', 'full'], help='省份名映射目标格式')
-    parser.add_argument('--output', default=None, help='输出文件(默认覆盖base)')
+    parser = argparse.ArgumentParser(description="面板数据合并工具")
+    parser.add_argument("--base", required=True, help="基础面板CSV")
+    parser.add_argument("--new", required=True, help="新数据CSV")
+    parser.add_argument("--on", default="province,year", help="连接键")
+    parser.add_argument("--cols", default=None, help="要合并的列(逗号分隔,默认取new中非键列)")
+    parser.add_argument("--map-province", default=None, choices=["short", "full"], help="省份名映射目标格式")
+    parser.add_argument("--output", default=None, help="输出文件(默认覆盖base)")
     args = parser.parse_args()
 
     base = load_csv(args.base)
     new = load_csv(args.new)
-    key_cols = [k.strip() for k in args.on.split(',')]
+    key_cols = [k.strip() for k in args.on.split(",")]
 
-    if args.cols:
-        new_cols = [k.strip() for k in args.cols.split(',')]
-    else:
-        new_cols = [k for k in new[0].keys() if k not in key_cols]
+    new_cols = [k.strip() for k in args.cols.split(",")] if args.cols else [k for k in new[0] if k not in key_cols]
 
     logging.info("基础面板: %s 行", len(base))
     logging.info("新数据: %s 行, 合并列: %s", len(new), new_cols)
@@ -82,7 +78,7 @@ def main():
     for col in new_cols:
         for r in base:
             if col not in r:
-                r[col] = ''
+                r[col] = ""
 
     base, merged = merge_panel(base, new, key_cols, new_cols, args.map_province)
 
@@ -95,9 +91,9 @@ def main():
 
     # 统计
     for col in new_cols:
-        non_empty = sum(1 for r in base if r.get(col, '').strip())
+        non_empty = sum(1 for r in base if r.get(col, "").strip())
         logging.info("%s: %s/%s 非空", col, non_empty, len(base))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

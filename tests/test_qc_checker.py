@@ -33,11 +33,11 @@ def test_check_required_without_value_cols_checks_all_rows(sample_rows):
 
 def test_check_unit_branches():
     rows = [
-        {"province": "北京", "year": "2023", "v": "123"},          # 纯数字通过
-        {"province": "上海", "year": "2023", "v": "1.2万台"},      # 万/亿异常
-        {"province": "广东", "year": "2023", "v": "500辆"},       # 单位不匹配
-        {"province": "江苏", "year": "2023", "v": "600台"},       # 正确单位
-        {"province": "浙江", "year": "2023", "v": "1.2e3"},      # 科学计数通过
+        {"province": "北京", "year": "2023", "v": "123"},  # 纯数字通过
+        {"province": "上海", "year": "2023", "v": "1.2万台"},  # 万/亿异常
+        {"province": "广东", "year": "2023", "v": "500辆"},  # 单位不匹配
+        {"province": "江苏", "year": "2023", "v": "600台"},  # 正确单位
+        {"province": "浙江", "year": "2023", "v": "1.2e3"},  # 科学计数通过
     ]
     issues = check_unit(rows, ["v"], expected_unit="台")
     assert len(issues) == 2

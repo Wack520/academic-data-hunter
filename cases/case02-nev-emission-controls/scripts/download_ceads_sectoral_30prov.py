@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 下载 CEADs 2012-2022「30个省份排放清单」。
 
@@ -19,7 +18,6 @@ from urllib.parse import unquote
 
 import requests
 from bs4 import BeautifulSoup
-
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT_DIR = ROOT / "cases" / "case02-nev-emission-controls" / "data" / "raw_ceads_sectoral_30prov"
@@ -123,4 +121,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

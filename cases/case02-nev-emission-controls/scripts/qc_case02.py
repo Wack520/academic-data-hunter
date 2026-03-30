@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Case02 一键 QC：
 - 主键唯一
@@ -13,7 +12,6 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-
 
 CORE_COLS = [
     "transport_co2_est_10k_ton",
@@ -78,4 +76,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

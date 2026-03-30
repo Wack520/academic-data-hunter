@@ -33,7 +33,7 @@ import shlex
 import subprocess
 import sys
 from collections import Counter, defaultdict
-from typing import Iterable
+from collections.abc import Iterable
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:
@@ -97,9 +97,8 @@ def _norm_value_for_key(col: str, raw: str) -> str:
             return normalize(v, "short")
         except ValueError:
             return v
-    if col == "year" and v:
-        if v.isdigit():
-            return str(int(v))
+    if col == "year" and v and v.isdigit():
+        return str(int(v))
     return v
 
 
@@ -107,7 +106,9 @@ def _row_key(row: dict, key_cols: list[str]) -> tuple:
     return tuple(_norm_value_for_key(c, row.get(c) or "") for c in key_cols)
 
 
-def coverage_stats(rows: list[dict], key_cols: list[str], value_cols: list[str], years: list[int] | None = None) -> dict:
+def coverage_stats(
+    rows: list[dict], key_cols: list[str], value_cols: list[str], years: list[int] | None = None
+) -> dict:
     total = len(rows)
     filled_keys: set[tuple] = set()
     all_keys: set[tuple] = set()
@@ -131,7 +132,7 @@ def coverage_stats(rows: list[dict], key_cols: list[str], value_cols: list[str],
     # 若key为 province+year 且给了年份范围，使用 30省×年份 的完整宇宙作为分母
     if years and set(key_cols) == {"province", "year"}:
         universe = set()
-        for p in PROVINCE_MAP.keys():
+        for p in PROVINCE_MAP:
             for y in years:
                 key_parts = []
                 for col in key_cols:
@@ -175,7 +176,9 @@ def main():
     parser.add_argument("--max-rounds", type=int, default=5, help="最大轮数")
     parser.add_argument("--min-gain", type=int, default=1, help="单轮最小新增键数")
     parser.add_argument("--patience", type=int, default=1, help="连续低增益容忍轮数")
-    parser.add_argument("--agent-cmd", default=None, help="Agent执行命令模板（支持 {task_file}/{round}/{data}/{repo_root}）")
+    parser.add_argument(
+        "--agent-cmd", default=None, help="Agent执行命令模板（支持 {task_file}/{round}/{data}/{repo_root}）"
+    )
     parser.add_argument("--validate-cmd", default=None, help="校验命令模板（同上占位符）")
     parser.add_argument("--report", default="cases/case01-nev-carbon/auto-round-report.md", help="报告输出md")
     args = parser.parse_args()
@@ -202,7 +205,9 @@ def main():
     missing_before = compute_missing(before_rows, years, value_cols[0])
     total_missing_before = sum(len(v) for v in missing_before.values())
     report_lines.append("## 初始状态")
-    report_lines.append(f"- 已覆盖键数：{before_stats['filled_keys_count']} / {before_stats['all_keys_count']} ({before_stats['fill_rate']:.1f}%)")
+    report_lines.append(
+        f"- 已覆盖键数：{before_stats['filled_keys_count']} / {before_stats['all_keys_count']} ({before_stats['fill_rate']:.1f}%)"
+    )
     report_lines.append(f"- 年份缺失总数（按 `{value_cols[0]}`）：{total_missing_before}")
     report_lines.append("")
 
@@ -313,7 +318,9 @@ def main():
     final_stats = coverage_stats(final_rows, key_cols, value_cols, years=years)
     report_lines.append("## 最终结果")
     report_lines.append(f"- 实际执行轮数：{executed_rounds}")
-    report_lines.append(f"- 最终覆盖键数：{final_stats['filled_keys_count']} / {final_stats['all_keys_count']} ({final_stats['fill_rate']:.1f}%)")
+    report_lines.append(
+        f"- 最终覆盖键数：{final_stats['filled_keys_count']} / {final_stats['all_keys_count']} ({final_stats['fill_rate']:.1f}%)"
+    )
     report_lines.append(f"- 各数值列非空：{final_stats['per_col_non_empty']}")
     report_lines.append(f"- 各年份覆盖（按任一value-col有值）：{final_stats['per_year_filled']}")
     report_lines.append("")

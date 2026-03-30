@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Case02 strict NEV 自动续跑入口（一条命令，无需对话继续）：
 1) 先刷新 strict 面板（collect_case02_nev_strict_partial.py）
@@ -10,6 +9,7 @@ Case02 strict NEV 自动续跑入口（一条命令，无需对话继续）：
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import json
 import subprocess
@@ -17,7 +17,6 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[3]
 CASE_DIR = ROOT / "cases" / "case02-nev-emission-controls"
@@ -91,7 +90,7 @@ def sum_candidates(path: Path, provinces: list[str]) -> tuple[int, int]:
         return 0, 0
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
+    except Exception:
         return 0, 0
     total_cands = 0
     total_urls = 0
@@ -117,15 +116,13 @@ def main() -> None:
                 for c in p.glob("*"):
                     if c.is_file():
                         c.unlink(missing_ok=True)
-                try:
+                with contextlib.suppress(Exception):
                     p.rmdir()
-                except Exception:
-                    pass
         (out_dir / "autopilot_report.md").unlink(missing_ok=True)
 
     report_path = out_dir / "autopilot_report.md"
     lines: list[str] = []
-    lines.append(f"# Case02 strict NEV 自动续跑报告")
+    lines.append("# Case02 strict NEV 自动续跑报告")
     lines.append(f"- 开始时间：{datetime.now().isoformat(timespec='seconds')}")
     lines.append(f"- year={args.year}, rounds={args.rounds}, run_mode={args.run_mode}")
     lines.append(
@@ -137,8 +134,10 @@ def main() -> None:
     # Step 1: 先刷新 strict 面板（把现有 SOURCES 写入面板）
     rc = 0
     if not args.skip_collect:
-        rc = run_cmd([sys.executable, "cases/case02-nev-emission-controls/scripts/collect_case02_nev_strict_partial.py"], ROOT)
-    lines.append(f"## 面板刷新")
+        rc = run_cmd(
+            [sys.executable, "cases/case02-nev-emission-controls/scripts/collect_case02_nev_strict_partial.py"], ROOT
+        )
+    lines.append("## 面板刷新")
     if args.skip_collect:
         lines.append("- collect_case02_nev_strict_partial.py skipped")
     else:
@@ -281,7 +280,7 @@ def main() -> None:
             status_cmd,
             ROOT,
         )
-        lines.append(f"## 最终状态快照")
+        lines.append("## 最终状态快照")
         lines.append(f"- candidates=`{last_out.as_posix()}`")
         lines.append("- status=`cases/case02-nev-emission-controls/strict-nev-status.md`")
         lines.append("")

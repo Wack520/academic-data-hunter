@@ -24,6 +24,9 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
+      - name: Lint
+        run: pip install ruff && ruff check . && ruff format --check .
+
       - name: Compile check
         run: python -m compileall -q scripts tools cases
 

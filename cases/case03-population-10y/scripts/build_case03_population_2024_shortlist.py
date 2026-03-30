@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 从 discover_case03_population_2024.py 的候选结果中，生成 2024 年常住人口严格复核清单。
 
@@ -16,7 +15,6 @@ import json
 import re
 from pathlib import Path
 from urllib.parse import urlparse
-
 
 ROOT = Path(__file__).resolve().parents[3]
 CASE_DIR = ROOT / "cases" / "case03-population-10y"
@@ -284,4 +282,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

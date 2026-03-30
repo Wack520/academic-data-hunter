@@ -4,6 +4,7 @@ QC Checker — 数据质量检查工具
   python qc_checker.py data.csv --key province,year --required source_url
   python qc_checker.py data.csv --value-col public_charging_piles --check-unit 台
 """
+
 import argparse
 import csv
 import logging
@@ -13,7 +14,7 @@ from collections import Counter
 
 
 def load_csv(path):
-    with open(path, encoding='utf-8-sig') as f:
+    with open(path, encoding="utf-8-sig") as f:
         return list(csv.DictReader(f))
 
 
@@ -29,12 +30,12 @@ def check_required(rows, required_cols, value_cols=None):
     issues = []
     for i, r in enumerate(rows):
         if value_cols:
-            has_value = any((r.get(c) or '').strip() for c in value_cols)
+            has_value = any((r.get(c) or "").strip() for c in value_cols)
             if not has_value:
                 continue  # 值为空时不检查来源
         for col in required_cols:
-            if not r.get(col, '').strip():
-                issues.append((i + 2, r.get('province', '?'), r.get('year', '?'), col))
+            if not r.get(col, "").strip():
+                issues.append((i + 2, r.get("province", "?"), r.get("year", "?"), col))
     return issues
 
 
@@ -45,26 +46,28 @@ def check_unit(rows, value_cols, expected_unit):
     - 若值中出现明确单位且不包含 expected_unit，判定为异常
     """
     issues = []
-    unit_keywords = ['台', '辆', '吨', '千瓦时', 'kwh', 'mwh', 'gwh']
+    unit_keywords = ["台", "辆", "吨", "千瓦时", "kwh", "mwh", "gwh"]
     for i, r in enumerate(rows):
         for col in value_cols:
-            raw = (r.get(col) or '').strip()
+            raw = (r.get(col) or "").strip()
             if not raw:
                 continue
 
             # 纯数字（含小数/负号/科学计数）直接通过
-            if re.fullmatch(r'[-+]?\d+(\.\d+)?([eE][-+]?\d+)?', raw):
+            if re.fullmatch(r"[-+]?\d+(\.\d+)?([eE][-+]?\d+)?", raw):
                 continue
 
             # 出现“万/亿”等一般说明未标准化
-            if any(x in raw for x in ['万', '亿']):
-                issues.append((i + 2, r.get('province', '?'), r.get('year', '?'), col, raw, '包含万/亿等未换算单位'))
+            if any(x in raw for x in ["万", "亿"]):
+                issues.append((i + 2, r.get("province", "?"), r.get("year", "?"), col, raw, "包含万/亿等未换算单位"))
                 continue
 
             lower_raw = raw.lower()
             found_unit_keyword = any(k in raw or k in lower_raw for k in unit_keywords)
             if found_unit_keyword and expected_unit not in raw:
-                issues.append((i + 2, r.get('province', '?'), r.get('year', '?'), col, raw, f'单位疑似不为{expected_unit}'))
+                issues.append(
+                    (i + 2, r.get("province", "?"), r.get("year", "?"), col, raw, f"单位疑似不为{expected_unit}")
+                )
     return issues
 
 
@@ -72,29 +75,29 @@ def print_coverage(rows, cols):
     """打印各列非空统计"""
     total = len(rows)
     logging.info("%s", f"{'列名':<40} {'非空':>6} / {total}  {'覆盖率':>8}")
-    logging.info("%s", '-' * 65)
+    logging.info("%s", "-" * 65)
     for col in cols:
-        non_empty = sum(1 for r in rows if r.get(col, '').strip())
+        non_empty = sum(1 for r in rows if r.get(col, "").strip())
         pct = non_empty / total * 100 if total else 0
         logging.info("%s", f"{col:<40} {non_empty:>6} / {total}  {pct:>7.1f}%")
 
 
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-    parser = argparse.ArgumentParser(description='数据QC检查工具')
-    parser.add_argument('csv_file', help='待检查的CSV文件')
-    parser.add_argument('--key', default='province,year', help='主键列名(逗号分隔)')
-    parser.add_argument('--required', default='source_url', help='必填列(逗号分隔)')
-    parser.add_argument('--value-col', default=None, help='数值列(逗号分隔；仅当任一列有值时检查required)')
-    parser.add_argument('--check-unit', default=None, help='期望单位（如 台/辆）；做轻量启发式检查')
+    parser = argparse.ArgumentParser(description="数据QC检查工具")
+    parser.add_argument("csv_file", help="待检查的CSV文件")
+    parser.add_argument("--key", default="province,year", help="主键列名(逗号分隔)")
+    parser.add_argument("--required", default="source_url", help="必填列(逗号分隔)")
+    parser.add_argument("--value-col", default=None, help="数值列(逗号分隔；仅当任一列有值时检查required)")
+    parser.add_argument("--check-unit", default=None, help="期望单位（如 台/辆）；做轻量启发式检查")
     args = parser.parse_args()
 
     rows = load_csv(args.csv_file)
-    key_cols = [k.strip() for k in args.key.split(',')]
-    required_cols = [k.strip() for k in args.required.split(',')]
+    key_cols = [k.strip() for k in args.key.split(",")]
+    required_cols = [k.strip() for k in args.required.split(",")]
     all_cols = list(rows[0].keys()) if rows else []
 
-    value_cols = [v.strip() for v in (args.value_col or '').split(',') if v.strip()]
+    value_cols = [v.strip() for v in (args.value_col or "").split(",") if v.strip()]
 
     logging.info("文件: %s", args.csv_file)
     logging.info("总行数: %s", len(rows))
@@ -103,16 +106,16 @@ def main():
     # 1. 唯一性检查
     dupes = check_uniqueness(rows, key_cols)
     if dupes:
-        logging.error("主键重复 (%s):", ','.join(key_cols))
+        logging.error("主键重复 (%s):", ",".join(key_cols))
         for k, v in dupes.items():
             logging.error("   %s: %s次", k, v)
     else:
-        logging.info("主键唯一性通过 (%s)", ','.join(key_cols))
+        logging.info("主键唯一性通过 (%s)", ",".join(key_cols))
 
     # 2. 必填字段检查
     issues = check_required(rows, required_cols, value_cols)
     if issues:
-        logging.error("必填字段缺失 (%s):", ','.join(required_cols))
+        logging.error("必填字段缺失 (%s):", ",".join(required_cols))
         for line, prov, year, col in issues[:10]:
             logging.error("   行%s: %s %s 缺少 %s", line, prov, year, col)
         if len(issues) > 10:
@@ -126,12 +129,13 @@ def main():
         if not value_cols:
             # 自动推断：排除key/来源/备注等字段
             value_cols = [
-                c for c in all_cols
+                c
+                for c in all_cols
                 if c not in key_cols
                 and c not in required_cols
-                and not c.endswith('_url')
-                and not c.startswith('source_')
-                and c != 'note'
+                and not c.endswith("_url")
+                and not c.startswith("source_")
+                and c != "note"
             ]
             value_cols = value_cols[:2]  # 控制检查范围，避免误报
 
@@ -156,5 +160,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

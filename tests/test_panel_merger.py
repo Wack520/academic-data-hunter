@@ -1,4 +1,5 @@
 import copy
+import importlib
 import sys
 from pathlib import Path
 
@@ -9,7 +10,7 @@ TOOLS_DIR = ROOT / "tools"
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
-from panel_merger import merge_panel
+merge_panel = importlib.import_module("panel_merger").merge_panel
 
 
 @pytest.fixture

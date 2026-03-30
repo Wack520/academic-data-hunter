@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 构建 Case02 严格口径面板（真实直采优先）：
 - 交通碳排放：CEADs 30省分部门清单直接提取（2012-2022）
@@ -9,10 +8,10 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pandas as pd
-import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = ROOT / "cases" / "case02-nev-emission-controls" / "data"
@@ -96,4 +95,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

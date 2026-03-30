@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 检查 Codex 配置中的 MCP 搜索服务器（如 tavily / exa）是否已配置。
 """

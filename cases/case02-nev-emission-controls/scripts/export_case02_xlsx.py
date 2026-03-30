@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 导出 case02 的 xlsx 文件（面板 + 来源台账）。
 """
@@ -34,4 +33,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
