@@ -229,6 +229,8 @@ python scripts/plan_research_workflow.py \
 
 Codex 协作执行详见 [docs/codex-agent-playbook.md](docs/codex-agent-playbook.md)
 
+架构总览详见 [docs/architecture.md](docs/architecture.md)
+
 ```
 定义变量与口径 → API自动化抓取 → Web搜索补缺 → 人机协作深挖 → QC入库合并
 ```
@@ -249,6 +251,8 @@ Codex 协作执行详见 [docs/codex-agent-playbook.md](docs/codex-agent-playboo
 2. 在 `cases/` 下创建新目录 `caseXX-你的主题/`
 3. 包含：`README.md`、`task-spec.md`、`data/`、`scripts/`
 4. 提交 PR
+
+更完整的协作规范见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## License
 
