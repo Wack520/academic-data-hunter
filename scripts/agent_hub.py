@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import shlex
 import subprocess
@@ -27,7 +28,10 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
 def run_script(script_name: str, args: list[str]) -> dict:
-    script_path = os.path.join(ROOT, "scripts", script_name)
+    if "/" in script_name or os.path.sep in script_name:
+        script_path = os.path.join(ROOT, script_name)
+    else:
+        script_path = os.path.join(ROOT, "scripts", script_name)
     cmd = [sys.executable, script_path] + args
     proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     return {
@@ -229,7 +233,7 @@ class AgentHandler(BaseHTTPRequestHandler):
 
         if self.path == "/qc-case01":
             args = payload_to_args(payload, ["no_strict_c_cross_check"])
-            res = run_script("qc_case01.py", args)
+            res = run_script("cases/case01-nev-carbon/scripts/qc_case01.py", args)
             self._send_json(200 if res["ok"] else 500, res)
             return
 
@@ -238,8 +242,8 @@ class AgentHandler(BaseHTTPRequestHandler):
 
 def serve(host: str, port: int):
     server = ThreadingHTTPServer((host, port), AgentHandler)
-    print(f"Agent API running at http://{host}:{port}")
-    print(
+    logging.info("Agent API running at http://%s:%s", host, port)
+    logging.info(
         "Endpoints: GET /health, POST /run-round, /validate-round, "
         "/auto-rounds, /plan-workflow, /plan-auto-rounds, /qc-case01"
     )
@@ -247,8 +251,8 @@ def serve(host: str, port: int):
 
 
 def chat():
-    print("Academic Data Hunter Interactive Agent")
-    print(
+    logging.info("Academic Data Hunter Interactive Agent")
+    logging.info(
         "commands: run_round ..., validate_round ..., auto_rounds ..., "
         "plan_workflow ..., plan_auto_rounds ..., qc_case01, exit"
     )
@@ -256,21 +260,21 @@ def chat():
         try:
             line = input("agent> ").strip()
         except (EOFError, KeyboardInterrupt):
-            print("\nbye")
+            logging.info("bye")
             break
         if not line:
             continue
         if line in {"exit", "quit"}:
-            print("bye")
+            logging.info("bye")
             break
         if line == "help":
-            print("示例:")
-            print("  run_round --data ... --value-col ... --year-start 2017 --year-end 2023 --output ...")
-            print("  validate_round --data ... --registry ... --variable charging --value-col ... --check-unit 台")
-            print("  auto_rounds --data ... --value-col ... --year-start 2017 --year-end 2023")
-            print("  plan_workflow --spec-file templates/research-spec-template.json")
-            print("  plan_auto_rounds --spec-file ... --data ... --value-col ... --year-start ... --year-end ...")
-            print("  qc_case01")
+            logging.info("示例:")
+            logging.info("  run_round --data ... --value-col ... --year-start 2017 --year-end 2023 --output ...")
+            logging.info("  validate_round --data ... --registry ... --variable charging --value-col ... --check-unit 台")
+            logging.info("  auto_rounds --data ... --value-col ... --year-start 2017 --year-end 2023")
+            logging.info("  plan_workflow --spec-file templates/research-spec-template.json")
+            logging.info("  plan_auto_rounds --spec-file ... --data ... --value-col ... --year-start ... --year-end ...")
+            logging.info("  qc_case01")
             continue
 
         parts = shlex.split(line)
@@ -281,34 +285,35 @@ def chat():
             "validate_round": "validate_round.py",
             "auto_rounds": "run_auto_rounds.py",
             "plan_workflow": "plan_research_workflow.py",
-            "qc_case01": "qc_case01.py",
+            "qc_case01": "cases/case01-nev-carbon/scripts/qc_case01.py",
         }
         if cmd == "plan_auto_rounds":
             payload = args_list_to_payload(args)
             res = run_plan_then_auto(payload)
             if res.get("plan", {}).get("stdout"):
-                print(res["plan"]["stdout"], end="")
+                logging.info("%s", res["plan"]["stdout"].rstrip())
             if res.get("plan", {}).get("stderr"):
-                print(res["plan"]["stderr"], end="", file=sys.stderr)
+                logging.error("%s", res["plan"]["stderr"].rstrip())
             auto = res.get("auto_rounds") or {}
             if auto.get("stdout"):
-                print(auto["stdout"], end="")
+                logging.info("%s", auto["stdout"].rstrip())
             if auto.get("stderr"):
-                print(auto["stderr"], end="", file=sys.stderr)
-            print(f"[ok={res.get('ok')} stage={res.get('stage')}]")
+                logging.error("%s", auto["stderr"].rstrip())
+            logging.info("[ok=%s stage=%s]", res.get("ok"), res.get("stage"))
             continue
         if cmd not in mapping:
-            print(f"unknown command: {cmd}")
+            logging.warning("unknown command: %s", cmd)
             continue
         res = run_script(mapping[cmd], args)
         if res["stdout"]:
-            print(res["stdout"], end="")
+            logging.info("%s", res["stdout"].rstrip())
         if res["stderr"]:
-            print(res["stderr"], end="", file=sys.stderr)
-        print(f"[exit={res['returncode']}]")
+            logging.error("%s", res["stderr"].rstrip())
+        logging.info("[exit=%s]", res["returncode"])
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     parser = argparse.ArgumentParser(description="Hybrid Agent Hub")
     sub = parser.add_subparsers(dest="mode", required=True)
 

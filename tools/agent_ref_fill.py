@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import logging
 import re
 from pathlib import Path
 
@@ -44,6 +45,7 @@ def make_key(row: dict, key_cols: list[str]) -> tuple:
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     parser = argparse.ArgumentParser(description="Reference Fill Agent")
     parser.add_argument("--task", required=True, help="任务文件")
     parser.add_argument("--data", required=True, help="待回填CSV")
@@ -61,7 +63,7 @@ def main():
     data_rows = load_csv(data_file)
     ref_rows = load_csv(ref_file)
     if not data_rows or not ref_rows:
-        print("empty input, skip")
+        logging.warning("empty input, skip")
         return
 
     ref_idx = {make_key(r, key_cols): r for r in ref_rows}
@@ -88,8 +90,8 @@ def main():
 
     fieldnames = list(data_rows[0].keys())
     save_csv(data_file, data_rows, fieldnames)
-    print(f"task years={sorted(years) if years else 'ALL'}")
-    print(f"scanned={scanned}, filled={filled}, value_col={args.value_col}")
+    logging.info("task years=%s", sorted(years) if years else "ALL")
+    logging.info("scanned=%s, filled=%s, value_col=%s", scanned, filled, args.value_col)
 
 
 if __name__ == "__main__":

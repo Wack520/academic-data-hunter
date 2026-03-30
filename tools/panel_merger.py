@@ -4,6 +4,7 @@
 """
 import argparse
 import csv
+import logging
 import sys
 
 try:
@@ -54,6 +55,7 @@ def merge_panel(base_rows, new_rows, key_cols, new_cols, province_target=None):
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     parser = argparse.ArgumentParser(description='面板数据合并工具')
     parser.add_argument('--base', required=True, help='基础面板CSV')
     parser.add_argument('--new', required=True, help='新数据CSV')
@@ -73,8 +75,8 @@ def main():
     else:
         new_cols = [k for k in new[0].keys() if k not in key_cols]
 
-    print(f"📊 基础面板: {len(base)} 行")
-    print(f"📄 新数据: {len(new)} 行, 合并列: {new_cols}")
+    logging.info("基础面板: %s 行", len(base))
+    logging.info("新数据: %s 行, 合并列: %s", len(new), new_cols)
 
     # 为base添加新列（如不存在）
     for col in new_cols:
@@ -88,13 +90,13 @@ def main():
     output = args.output or args.base
     save_csv(base, output, fieldnames)
 
-    print(f"✅ 合并完成: {merged} 个值已填入")
-    print(f"💾 输出: {output}")
+    logging.info("合并完成: %s 个值已填入", merged)
+    logging.info("输出: %s", output)
 
     # 统计
     for col in new_cols:
         non_empty = sum(1 for r in base if r.get(col, '').strip())
-        print(f"   {col}: {non_empty}/{len(base)} 非空")
+        logging.info("%s: %s/%s 非空", col, non_empty, len(base))
 
 
 if __name__ == '__main__':

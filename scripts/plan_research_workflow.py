@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -186,6 +187,7 @@ def render_md(plan: Dict) -> str:
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     args = parse_args()
     spec_path = Path(args.spec_file)
     spec = load_spec(spec_path)
@@ -195,9 +197,8 @@ def main() -> None:
     out_md = Path(args.out_md) if args.out_md else spec_path.with_name(spec_path.stem + ".plan.md")
     out_json.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
     out_md.write_text(render_md(plan), encoding="utf-8")
-    print(f"[DONE] json={out_json} md={out_md}")
+    logging.info("json=%s md=%s", out_json, out_md)
 
 
 if __name__ == "__main__":
     main()
-

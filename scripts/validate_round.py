@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import logging
 import os
 import sys
 from collections import Counter
@@ -37,6 +38,7 @@ def has_value(row: dict, value_cols: list[str] | None) -> bool:
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     parser = argparse.ArgumentParser(description="回合结果校验（QC + registry一致性）")
     parser.add_argument("--data", required=True, help="数据CSV")
     parser.add_argument("--registry", required=True, help="来源台账CSV")
@@ -62,8 +64,8 @@ def main():
     required_cols = [x.strip() for x in args.required.split(",") if x.strip()]
     value_cols = [x.strip() for x in (args.value_col or "").split(",") if x.strip()]
 
-    print(f"数据行数: {len(data_rows)}")
-    print(f"台账行数: {len(reg_rows)}")
+    logging.info("数据行数: %s", len(data_rows))
+    logging.info("台账行数: %s", len(reg_rows))
 
     failed = False
 
@@ -71,21 +73,21 @@ def main():
     dupes = check_uniqueness(data_rows, key_cols)
     if dupes:
         failed = True
-        print(f"[失败] 主键重复: {len(dupes)} 组")
+        logging.error("主键重复: %s 组", len(dupes))
         for k, v in list(dupes.items())[:10]:
-            print(f"  {k}: {v}次")
+            logging.error("  %s: %s次", k, v)
     else:
-        print("[通过] 主键唯一性")
+        logging.info("主键唯一性通过")
 
     # 2) 必填字段
     req_issues = check_required(data_rows, required_cols, value_cols)
     if req_issues:
         failed = True
-        print(f"[失败] 必填字段缺失: {len(req_issues)} 处")
+        logging.error("必填字段缺失: %s 处", len(req_issues))
         for line, prov, year, col in req_issues[:10]:
-            print(f"  行{line}: {prov} {year} 缺少 {col}")
+            logging.error("  行%s: %s %s 缺少 %s", line, prov, year, col)
     else:
-        print("[通过] 必填字段检查")
+        logging.info("必填字段检查通过")
 
     # 3) 单位检查（可选）
     if args.check_unit:
@@ -95,11 +97,11 @@ def main():
             unit_issues = []
         if unit_issues:
             failed = True
-            print(f"[失败] 单位检查: {len(unit_issues)} 处")
+            logging.error("单位检查失败: %s 处", len(unit_issues))
             for line, prov, year, col, raw, reason in unit_issues[:10]:
-                print(f"  行{line}: {prov} {year} {col}={raw!r} ({reason})")
+                logging.error("  行%s: %s %s %s=%r (%s)", line, prov, year, col, raw, reason)
         else:
-            print(f"[通过] 单位检查（{args.check_unit}）")
+            logging.info("单位检查通过（%s）", args.check_unit)
 
     # 4) 台账一致性（source_level + source_name + source_url）
     reg_filtered = [r for r in reg_rows if (r.get("variable") or "").strip() == args.variable]
@@ -152,36 +154,41 @@ def main():
 
     if data_missing_in_reg:
         failed = True
-        print(f"[失败] 数据来源未在registry登记: {len(data_missing_in_reg)} 条")
+        logging.error("数据来源未在registry登记: %s 条", len(data_missing_in_reg))
         for item in data_missing_in_reg[:10]:
             line, prov, year, k = item
-            print(f"  行{line}: {prov} {year} -> {k}")
+            logging.error("  行%s: %s %s -> %s", line, prov, year, k)
     else:
-        print("[通过] 数据来源与registry匹配")
+        logging.info("数据来源与registry匹配")
 
     if c_level_no_cross:
-        level_tag = "[失败]" if args.strict_c_cross_check else "[告警]"
-        print(f"{level_tag} C级来源缺少cross_check_url: {len(c_level_no_cross)} 条")
+        if args.strict_c_cross_check:
+            logging.error("C级来源缺少cross_check_url: %s 条", len(c_level_no_cross))
+        else:
+            logging.warning("C级来源缺少cross_check_url: %s 条", len(c_level_no_cross))
         for item in c_level_no_cross[:10]:
             line, prov, year, source_name = item
-            print(f"  行{line}: {prov} {year} -> {source_name}")
+            if args.strict_c_cross_check:
+                logging.error("  行%s: %s %s -> %s", line, prov, year, source_name)
+            else:
+                logging.warning("  行%s: %s %s -> %s", line, prov, year, source_name)
         if args.strict_c_cross_check:
             failed = True
     else:
-        print("[通过] C级来源交叉核验检查")
+        logging.info("C级来源交叉核验检查通过")
 
     if has_source_id:
         if source_id_issues:
             failed = True
-            print(f"[失败] source_id 对齐问题: {len(source_id_issues)} 条")
+            logging.error("source_id 对齐问题: %s 条", len(source_id_issues))
             for line, prov, year, reason in source_id_issues[:10]:
-                print(f"  行{line}: {prov} {year} -> {reason}")
+                logging.error("  行%s: %s %s -> %s", line, prov, year, reason)
         else:
-            print("[通过] source_id 对齐检查")
+            logging.info("source_id 对齐检查通过")
 
     if failed:
         sys.exit(1)
-    print("全部检查通过。")
+    logging.info("全部检查通过。")
 
 
 if __name__ == "__main__":

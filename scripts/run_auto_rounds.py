@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import logging
 import os
 import shlex
 import subprocess
@@ -52,11 +53,11 @@ def parse_csv_list(raw: str) -> list[str]:
 
 def run_command(cmd: Iterable[str] | str, cwd: str, shell: bool = False) -> int:
     if shell:
-        print(f"[CMD] {cmd}")
+        logging.info("[CMD] %s", cmd)
         result = subprocess.run(cmd, cwd=cwd, shell=True)
     else:
         cmd_list = list(cmd)
-        print(f"[CMD] {' '.join(shlex.quote(x) for x in cmd_list)}")
+        logging.info("[CMD] %s", " ".join(shlex.quote(x) for x in cmd_list))
         result = subprocess.run(cmd_list, cwd=cwd)
     return result.returncode
 
@@ -159,6 +160,7 @@ def write_report(path: str, report_lines: list[str]):
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     parser = argparse.ArgumentParser(description="多轮自动调度")
     parser.add_argument("--data", required=True, help="目标数据CSV")
     parser.add_argument("--value-col", required=True, help="目标数值列（逗号分隔）")
@@ -317,7 +319,7 @@ def main():
     report_lines.append("")
 
     write_report(args.report, report_lines)
-    print(f"已输出报告: {args.report}")
+    logging.info("已输出报告: %s", args.report)
 
 
 if __name__ == "__main__":

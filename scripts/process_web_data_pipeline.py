@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import logging
 import re
 import time
 from dataclasses import dataclass
@@ -214,6 +215,7 @@ def extract_by_schema(text: str, rules: List[FieldRule]) -> Dict[str, Dict]:
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     args = parse_args()
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -230,7 +232,7 @@ def main() -> None:
 
     urls = dedup_keep_order(urls)[: max(1, int(args.max_urls))]
     if not urls:
-        print("[INFO] no urls")
+        logging.info("no urls")
         return
 
     rules: List[FieldRule] = []
@@ -313,11 +315,11 @@ def main() -> None:
         w.writeheader()
         w.writerows(rows)
 
-    print(f"[DONE] urls={len(urls)} ok={ok} summary={summary_csv}")
+    logging.info("urls=%s ok=%s summary=%s", len(urls), ok, summary_csv)
     if args.mode in {"markdown", "both"}:
-        print(f"[OUT] markdown={md_jsonl}")
+        logging.info("markdown=%s", md_jsonl)
     if args.mode in {"extract", "both"} and rules:
-        print(f"[OUT] extracted={extract_jsonl}")
+        logging.info("extracted=%s", extract_jsonl)
 
 
 if __name__ == "__main__":

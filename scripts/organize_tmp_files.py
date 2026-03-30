@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
 
 
@@ -21,6 +22,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     args = parse_args()
     target = ROOT / args.target
     files = []
@@ -29,13 +31,13 @@ def main() -> None:
     files = sorted({p.resolve() for p in files})
 
     if not files:
-        print("[INFO] no scattered tmp files found")
+        logging.info("no scattered tmp files found")
         return
 
-    print(f"[INFO] found={len(files)}")
+    logging.info("found=%s", len(files))
     if args.dry_run:
         for f in files:
-            print(f"  - {f.name}")
+            logging.info("- %s", f.name)
         return
 
     target.mkdir(parents=True, exist_ok=True)
@@ -44,9 +46,8 @@ def main() -> None:
         dst = target / f.name
         f.rename(dst)
         moved += 1
-    print(f"[DONE] moved={moved} -> {target}")
+    logging.info("moved=%s -> %s", moved, target)
 
 
 if __name__ == "__main__":
     main()
-

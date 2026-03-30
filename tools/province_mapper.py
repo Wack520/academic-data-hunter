@@ -2,6 +2,7 @@
 省份名称映射工具
 支持：短名 ↔ 全名 ↔ 行政区划代码
 """
+import logging
 
 # 30省映射表（剔除西藏及港澳台）
 PROVINCE_MAP = {
@@ -101,7 +102,8 @@ def get_all_provinces(target='short') -> list:
 
 
 if __name__ == '__main__':
-    print("30省短名:", get_all_provinces('short'))
-    print("\n映射测试:")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    logging.info("30省短名: %s", get_all_provinces('short'))
+    logging.info("映射测试:")
     for name in ['北京', '北京市', '内蒙古自治区', '广西壮族自治区']:
-        print(f"  {name} → short={normalize(name, 'short')}, full={normalize(name, 'full')}")
+        logging.info("  %s → short=%s, full=%s", name, normalize(name, 'short'), normalize(name, 'full'))

@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import logging
 import os
 import sys
 from collections import defaultdict
@@ -157,6 +158,7 @@ def build_markdown(
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     parser = argparse.ArgumentParser(description="生成下一轮补缺任务文档")
     parser.add_argument("--data", required=True, help="输入CSV")
     parser.add_argument("--value-col", required=True, help="数值列名")
@@ -195,8 +197,8 @@ def main():
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(md)
 
-    print(f"已生成: {args.output}")
-    print(f"输入行数: {len(rows)}")
+    logging.info("已生成: %s", args.output)
+    logging.info("输入行数: %s", len(rows))
 
 
 if __name__ == "__main__":
