@@ -4,9 +4,14 @@
 """
 
 import logging
+from typing import Literal, TypeAlias
+
+ProvinceRecord: TypeAlias = dict[str, str]
+ProvinceMap: TypeAlias = dict[str, ProvinceRecord]
+ProvinceTarget: TypeAlias = Literal["short", "full", "code"]
 
 # 30省映射表（剔除西藏及港澳台）
-PROVINCE_MAP = {
+PROVINCE_MAP: ProvinceMap = {
     "北京": {"full": "北京市", "code": "110000"},
     "天津": {"full": "天津市", "code": "120000"},
     "河北": {"full": "河北省", "code": "130000"},
@@ -40,8 +45,8 @@ PROVINCE_MAP = {
 }
 
 # 反向映射
-_FULL_TO_SHORT = {v["full"]: k for k, v in PROVINCE_MAP.items()}
-_CODE_TO_SHORT = {v["code"]: k for k, v in PROVINCE_MAP.items()}
+_FULL_TO_SHORT: dict[str, str] = {v["full"]: k for k, v in PROVINCE_MAP.items()}
+_CODE_TO_SHORT: dict[str, str] = {v["code"]: k for k, v in PROVINCE_MAP.items()}
 
 
 def short_to_full(name: str) -> str:
@@ -62,7 +67,7 @@ def full_to_short(name: str) -> str:
     raise ValueError(f"未知省份: {name}")
 
 
-def normalize(name: str, target="short") -> str:
+def normalize(name: str, target: ProvinceTarget = "short") -> str:
     """
     省份名标准化
     target: 'short' | 'full' | 'code'
@@ -84,22 +89,22 @@ def normalize(name: str, target="short") -> str:
 
     if target == "short":
         return short
-    elif target == "full":
+    if target == "full":
         return PROVINCE_MAP[short]["full"]
-    elif target == "code":
+    if target == "code":
         return PROVINCE_MAP[short]["code"]
-    else:
-        raise ValueError(f"target必须为 short/full/code, 收到: {target}")
+    raise ValueError(f"target必须为 short/full/code, 收到: {target}")
 
 
-def get_all_provinces(target="short") -> list:
+def get_all_provinces(target: ProvinceTarget = "short") -> list[str]:
     """返回30省列表"""
     if target == "short":
         return list(PROVINCE_MAP.keys())
-    elif target == "full":
+    if target == "full":
         return [v["full"] for v in PROVINCE_MAP.values()]
-    elif target == "code":
+    if target == "code":
         return [v["code"] for v in PROVINCE_MAP.values()]
+    raise ValueError(f"target必须为 short/full/code, 收到: {target}")
 
 
 if __name__ == "__main__":

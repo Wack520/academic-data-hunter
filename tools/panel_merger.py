@@ -3,11 +3,14 @@
 用法: python panel_merger.py --base panel.csv --new data.csv --on province,year --map-province short-to-full
 """
 
+from __future__ import annotations
+
 import argparse
 import contextlib
 import csv
 import logging
 import sys
+from typing import Literal, TypeAlias, cast
 
 try:
     from province_mapper import normalize
@@ -15,36 +18,46 @@ except ImportError:
     sys.path.insert(0, ".")
     from province_mapper import normalize
 
+Row: TypeAlias = dict[str, str]
+PanelKey: TypeAlias = tuple[str, ...]
+ProvinceMapTarget: TypeAlias = Literal["short", "full"]
 
-def load_csv(path):
+
+def load_csv(path: str) -> list[Row]:
     with open(path, encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
+        return [dict(row) for row in csv.DictReader(f)]
 
 
-def save_csv(rows, path, fieldnames):
+def save_csv(rows: list[Row], path: str, fieldnames: list[str]) -> None:
     with open(path, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
         w.writerows(rows)
 
 
-def merge_panel(base_rows, new_rows, key_cols, new_cols, province_target=None):
+def merge_panel(
+    base_rows: list[Row],
+    new_rows: list[Row],
+    key_cols: list[str],
+    new_cols: list[str],
+    province_target: ProvinceMapTarget | None = None,
+) -> tuple[list[Row], int]:
     """左连接合并"""
     # 建立新数据索引
-    new_index = {}
+    new_index: dict[PanelKey, Row] = {}
     for r in new_rows:
         prov = r.get("province", "")
         if province_target:
             with contextlib.suppress(ValueError):
                 prov = normalize(prov, province_target)
-        key = tuple([prov if k == "province" else r.get(k, "") for k in key_cols])
-        new_index[key] = r
+        new_key: PanelKey = tuple(prov if k == "province" else r.get(k, "") for k in key_cols)
+        new_index[new_key] = r
 
     # 合并
     merged = 0
     for r in base_rows:
-        key = tuple(r.get(k, "") for k in key_cols)
-        match = new_index.get(key)
+        base_key: PanelKey = tuple(r.get(k, "") for k in key_cols)
+        match = new_index.get(base_key)
         if match:
             for col in new_cols:
                 if col in match and match[col].strip():
@@ -54,7 +67,7 @@ def merge_panel(base_rows, new_rows, key_cols, new_cols, province_target=None):
     return base_rows, merged
 
 
-def main():
+def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     parser = argparse.ArgumentParser(description="面板数据合并工具")
     parser.add_argument("--base", required=True, help="基础面板CSV")
@@ -80,7 +93,8 @@ def main():
             if col not in r:
                 r[col] = ""
 
-    base, merged = merge_panel(base, new, key_cols, new_cols, args.map_province)
+    province_target = cast(ProvinceMapTarget | None, args.map_province)
+    base, merged = merge_panel(base, new, key_cols, new_cols, province_target)
 
     fieldnames = list(base[0].keys())
     output = args.output or args.base

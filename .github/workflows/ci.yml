@@ -27,6 +27,9 @@ jobs:
       - name: Lint
         run: pip install ruff && ruff check . && ruff format --check .
 
+      - name: Type check
+        run: pip install mypy && mypy tools/ --ignore-missing-imports
+
       - name: Compile check
         run: python -m compileall -q scripts tools cases
 

@@ -5,29 +5,39 @@ QC Checker — 数据质量检查工具
   python qc_checker.py data.csv --value-col public_charging_piles --check-unit 台
 """
 
+from __future__ import annotations
+
 import argparse
 import csv
 import logging
 import re
 import sys
 from collections import Counter
+from typing import TypeAlias
+
+Row: TypeAlias = dict[str, str]
+DuplicateKey: TypeAlias = tuple[str, ...]
+RequiredIssue: TypeAlias = tuple[int, str, str, str]
+UnitIssue: TypeAlias = tuple[int, str, str, str, str, str]
 
 
-def load_csv(path):
+def load_csv(path: str) -> list[Row]:
     with open(path, encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
+        return [dict(row) for row in csv.DictReader(f)]
 
 
-def check_uniqueness(rows, key_cols):
+def check_uniqueness(rows: list[Row], key_cols: list[str]) -> dict[DuplicateKey, int]:
     """检查主键唯一性"""
-    keys = [tuple(r[k] for k in key_cols) for r in rows]
+    keys: list[DuplicateKey] = [tuple((r.get(k) or "") for k in key_cols) for r in rows]
     dupes = {k: v for k, v in Counter(keys).items() if v > 1}
     return dupes
 
 
-def check_required(rows, required_cols, value_cols=None):
+def check_required(
+    rows: list[Row], required_cols: list[str], value_cols: list[str] | None = None
+) -> list[RequiredIssue]:
     """检查必填字段：当任一 value_cols 有值时，required_cols 不能为空"""
-    issues = []
+    issues: list[RequiredIssue] = []
     for i, r in enumerate(rows):
         if value_cols:
             has_value = any((r.get(c) or "").strip() for c in value_cols)
@@ -39,13 +49,13 @@ def check_required(rows, required_cols, value_cols=None):
     return issues
 
 
-def check_unit(rows, value_cols, expected_unit):
+def check_unit(rows: list[Row], value_cols: list[str], expected_unit: str) -> list[UnitIssue]:
     """
     检查单位异常（轻量启发式）：
     - 若值中出现“万/亿”等数量级单位，判定为异常（应先完成换算再入库）
     - 若值中出现明确单位且不包含 expected_unit，判定为异常
     """
-    issues = []
+    issues: list[UnitIssue] = []
     unit_keywords = ["台", "辆", "吨", "千瓦时", "kwh", "mwh", "gwh"]
     for i, r in enumerate(rows):
         for col in value_cols:
@@ -71,7 +81,7 @@ def check_unit(rows, value_cols, expected_unit):
     return issues
 
 
-def print_coverage(rows, cols):
+def print_coverage(rows: list[Row], cols: list[str]) -> None:
     """打印各列非空统计"""
     total = len(rows)
     logging.info("%s", f"{'列名':<40} {'非空':>6} / {total}  {'覆盖率':>8}")
@@ -82,7 +92,7 @@ def print_coverage(rows, cols):
         logging.info("%s", f"{col:<40} {non_empty:>6} / {total}  {pct:>7.1f}%")
 
 
-def main():
+def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     parser = argparse.ArgumentParser(description="数据QC检查工具")
     parser.add_argument("csv_file", help="待检查的CSV文件")
