@@ -1,0 +1,39 @@
+{
+  "required_term": "常住人口",
+  "any_terms": ["常住人口", "年末常住人口"],
+  "exclude_phrases": ["全国人口"],
+  "value_tokens": ["年末常住人口", "常住人口"],
+  "primary_pattern": "(?:达到|达|为|约为)?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*({units})",
+  "fallback_pattern": "(?:年末常住人口|常住人口)[^。；，,]{0,20}([0-9]+(?:\\.[0-9]+)?)\\s*({units})",
+  "unit_to_10k": {
+    "万人": 1.0,
+    "人": 0.0001
+  },
+  "year_end_markers": ["截至{year}年底", "{year}年末"],
+  "partial_year_markers": ["截至11月底", "截至9月底"],
+  "province_scope_markers": ["全省", "全区", "我省", "我区"],
+  "city_scope_markers": ["全市"],
+  "national_scope_markers": ["全国"],
+  "score_weights": {
+    "year_end": 8,
+    "partial_year": 4,
+    "province_scope": 3,
+    "explicit_province": 4,
+    "city_scope": -5,
+    "national_scope": -9,
+    "other_province": -8,
+    "url_hint": 1,
+    "search_province": 4,
+    "search_year": 3
+  },
+  "search_positive_terms": {
+    "常住人口": 4,
+    "统计公报": 3,
+    "政府": 2
+  },
+  "search_negative_terms": {
+    "全国": -4,
+    "全市": -3,
+    "某市": -3
+  }
+}

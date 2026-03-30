@@ -34,6 +34,7 @@ from camoufox.sync_api import Camoufox
 
 from tools.candidate_extractor import dedup, extract_candidates, score_domain_quality, score_search_result
 from tools.engines import get_engine, supported_engines
+from tools.extractor_schema import ExtractorSchema, load_extractor_schema
 from tools.fetcher import get_or_fetch_text
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -147,6 +148,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--request-timeout-sec", type=int, default=18, help="正文抓取请求超时秒数")
     parser.add_argument("--query-timeout-ms", type=int, default=45000, help="单次查询页面超时毫秒")
     parser.add_argument("--max-candidates", type=int, default=12, help="每省输出 top 候选数量")
+    parser.add_argument("--schema-file", default="", help="可选：候选抽取规则 JSON 文件（默认内置NEV规则）")
     parser.add_argument("--resume", action="store_true", help="从已有输出断点续跑")
     parser.add_argument("--force", action="store_true", help="忽略断点信息，强制重跑")
     args = parser.parse_args()
@@ -341,9 +343,15 @@ def run_single_query(
     }
 
 
-def scan_url_for_candidates(province: str, url: str, timeout_sec: int, year: int) -> list[dict[str, object]]:
+def scan_url_for_candidates(
+    province: str,
+    url: str,
+    timeout_sec: int,
+    year: int,
+    schema: ExtractorSchema,
+) -> list[dict[str, object]]:
     text = get_or_fetch_text(url, timeout_sec=timeout_sec)
-    return extract_candidates(province, url, text, year=year)
+    return extract_candidates(province, url, text, year=year, schema=schema)
 
 
 def process_single_province(
@@ -353,6 +361,7 @@ def process_single_province(
     engines: list[str],
     max_fetch_pages: int,
     domain_filters: list[str],
+    schema: ExtractorSchema,
 ) -> dict[str, Any]:
     queries = build_queries(province, args.year)
     query_debug: list[dict[str, Any]] = []
@@ -393,6 +402,7 @@ def process_single_province(
                     args.year,
                     str(row.get("title") or ""),
                     str(row.get("snippet") or ""),
+                    schema=schema,
                 )
                 domain_score = score_domain_quality(url)
                 row_score += domain_score + int(ENGINE_BONUS.get(row_engine, 0))
@@ -439,7 +449,12 @@ def process_single_province(
     with ThreadPoolExecutor(max_workers=max(1, int(args.fetch_workers))) as executor:
         futures = {
             executor.submit(
-                scan_url_for_candidates, province, item["url"], int(args.request_timeout_sec), args.year
+                scan_url_for_candidates,
+                province,
+                item["url"],
+                int(args.request_timeout_sec),
+                args.year,
+                schema,
             ): item
             for item in fetch_targets
         }
@@ -493,6 +508,7 @@ def main() -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     engines = parse_engines(args.engines)
     domain_filters = parse_domain_filter(args.domain_filter)
+    schema = load_extractor_schema(args.schema_file)
 
     if args.provinces.strip():
         provinces = [item.strip() for item in args.provinces.split(",") if item.strip()]
@@ -535,7 +551,7 @@ def main() -> None:
     max_fetch_pages = max(1, min(int(args.max_fetch_pages), int(args.max_pages)))
     logging.info(
         "provinces=%s, engines=%s, engine_mode=%s, fetch_workers=%s, province_workers=%s, max_pages=%s, "
-        "max_fetch_pages=%s, per_domain_cap=%s, domain_filter=%s",
+        "max_fetch_pages=%s, per_domain_cap=%s, domain_filter=%s, schema=%s",
         len(to_run),
         engines,
         args.engine_mode,
@@ -545,6 +561,7 @@ def main() -> None:
         max_fetch_pages,
         args.per_domain_cap,
         domain_filters or "ALL",
+        args.schema_file or "builtin-nev",
     )
 
     def open_browser() -> Camoufox:
@@ -577,7 +594,13 @@ def main() -> None:
                 while True:
                     try:
                         record = process_single_province(
-                            browser, province, args, engines, max_fetch_pages, domain_filters
+                            browser,
+                            province,
+                            args,
+                            engines,
+                            max_fetch_pages,
+                            domain_filters,
+                            schema,
                         )
                         record["worker"] = worker_tag
                         save_province_result(province, record)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
+from tools.extractor_schema import DEFAULT_EXTRACTOR_SCHEMA, ExtractorSchema
 from tools.province_mapper import PROVINCE_MAP
 
 PROV_ALIAS = {
@@ -39,6 +40,14 @@ PROV_URL_HINTS = {
 OTHER_PROV_HINTS: list[str] = list(PROVINCE_MAP.keys())
 
 
+def _resolve_schema(schema: ExtractorSchema | None) -> ExtractorSchema:
+    return schema or DEFAULT_EXTRACTOR_SCHEMA
+
+
+def _weight(schema: ExtractorSchema, key: str, default: int = 0) -> int:
+    return int(schema.score_weights.get(key, default))
+
+
 def split_sentences(text: str) -> list[str]:
     normalized = re.sub(r"\s+", " ", text)
     return [item.strip() for item in re.split(r"(?<=[。！？；])", normalized) if item.strip()]
@@ -65,77 +74,104 @@ def score_domain_quality(url: str) -> int:
     return score_value
 
 
-def score(province: str, sentence: str, url: str, year: int = 2023) -> int:
+def score(
+    province: str,
+    sentence: str,
+    url: str,
+    year: int = 2023,
+    schema: ExtractorSchema | None = None,
+) -> int:
+    active_schema = _resolve_schema(schema)
     alias = PROV_ALIAS.get(province, [province.replace("省", "").replace("市", "")])
     explicit_name = alias[0]
     score_value = 0
-    year_markers = [
-        f"截至{year}年底",
-        f"{year}年底",
-        f"{year}年末",
-        "截至去年底",
-        "截至去年末",
-    ]
+
+    year_markers = active_schema.resolve_year_end_markers(year)
     if any(marker in sentence for marker in year_markers):
-        score_value += 8
-    if any(marker in sentence for marker in ["截至11月底", "截至10月底", "截至9月底", "截至今年9月30日"]):
-        score_value += 5
-    if any(marker in sentence for marker in ["全省", "全区", "我省", "我区"]):
-        score_value += 4
+        score_value += _weight(active_schema, "year_end", 8)
+
+    if any(marker in sentence for marker in active_schema.partial_year_markers):
+        score_value += _weight(active_schema, "partial_year", 5)
+
+    if any(marker in sentence for marker in active_schema.province_scope_markers):
+        score_value += _weight(active_schema, "province_scope", 4)
+
     if explicit_name in sentence or province in sentence:
-        score_value += 4
-    if "全市" in sentence:
-        score_value -= 5
-    if "全国" in sentence:
-        score_value -= 9
-    for prov_keyword in OTHER_PROV_HINTS:
-        if prov_keyword == explicit_name:
+        score_value += _weight(active_schema, "explicit_province", 4)
+
+    if any(marker in sentence for marker in active_schema.city_scope_markers):
+        score_value += _weight(active_schema, "city_scope", -5)
+
+    if any(marker in sentence for marker in active_schema.national_scope_markers):
+        score_value += _weight(active_schema, "national_scope", -9)
+
+    for province_keyword in OTHER_PROV_HINTS:
+        if province_keyword == explicit_name:
             continue
-        if prov_keyword in sentence:
-            score_value -= 8
+        if province_keyword in sentence:
+            score_value += _weight(active_schema, "other_province", -8)
             break
 
-    url_l = url.lower()
+    lower_url = url.lower()
     if explicit_name not in sentence and province not in sentence:
         hints = PROV_URL_HINTS.get(province, [])
-        if hints and any(hint in url_l for hint in hints):
-            score_value += 2
+        if hints and any(hint in lower_url for hint in hints):
+            score_value += _weight(active_schema, "url_hint", 2)
 
     return score_value
 
 
-def _extract_value(sentence: str) -> tuple[float, str] | None:
+def _render_units_pattern(schema: ExtractorSchema) -> str:
+    units = [re.escape(unit) for unit in schema.unit_to_10k if unit]
+    if not units:
+        return r"万辆|辆"
+    return "|".join(units)
+
+
+def _render_regex(pattern: str, schema: ExtractorSchema) -> str:
+    return pattern.replace("{units}", f"(?:{_render_units_pattern(schema)})")
+
+
+def _extract_value(sentence: str, schema: ExtractorSchema | None = None) -> tuple[float, str] | None:
+    active_schema = _resolve_schema(schema)
+    primary_pattern = _render_regex(active_schema.primary_pattern, active_schema)
+    fallback_pattern = _render_regex(active_schema.fallback_pattern, active_schema)
+
     match = None
-    for token in ["新能源汽车保有量", "新能源车保有量", "电动汽车保有量"]:
+    for token in active_schema.value_tokens:
         pos = sentence.find(token)
         if pos < 0:
             continue
         tail = sentence[pos : pos + 90]
-        match = re.search(r"(?:达到|达|为|约为|突破)?\s*([0-9]+(?:\.[0-9]+)?)\s*(万辆|辆)", tail)
+        match = re.search(primary_pattern, tail)
         if match:
             break
     if not match:
-        match = re.search(
-            r"(?:新能源汽车|新能源车|电动汽车)[^。；，,]{0,40}(?:保有量)?[^0-9]{0,12}([0-9]+(?:\.[0-9]+)?)\s*(万辆|辆)",
-            sentence,
-        )
+        match = re.search(fallback_pattern, sentence)
     if not match:
         return None
     return float(match.group(1)), match.group(2)
 
 
-def extract_candidates(province: str, url: str, text: str, year: int = 2023) -> list[dict[str, object]]:
+def extract_candidates(
+    province: str,
+    url: str,
+    text: str,
+    year: int = 2023,
+    schema: ExtractorSchema | None = None,
+) -> list[dict[str, object]]:
+    active_schema = _resolve_schema(schema)
     alias = PROV_ALIAS.get(province, [province.replace("省", "").replace("市", "")])
     explicit_name = alias[0]
-    url_l = url.lower()
+    lower_url = url.lower()
 
     out: list[dict[str, object]] = []
     for sentence in split_sentences(text):
-        if "保有量" not in sentence:
+        if active_schema.required_term and active_schema.required_term not in sentence:
             continue
-        if "新能源" not in sentence and "电动汽车" not in sentence:
+        if active_schema.any_terms and not any(term in sentence for term in active_schema.any_terms):
             continue
-        if "全国新能源汽车保有量" in sentence:
+        if any(term in sentence for term in active_schema.exclude_phrases):
             continue
 
         has_explicit_province = explicit_name in sentence or province in sentence
@@ -144,14 +180,15 @@ def extract_candidates(province: str, url: str, text: str, year: int = 2023) -> 
             continue
         if not has_explicit_province:
             hints = PROV_URL_HINTS.get(province, [])
-            if hints and not any(h in url_l for h in hints):
+            if hints and not any(hint in lower_url for hint in hints):
                 continue
 
-        extracted = _extract_value(sentence)
+        extracted = _extract_value(sentence, schema=active_schema)
         if extracted is None:
             continue
         value_raw, unit = extracted
-        value_10k = value_raw if unit == "万辆" else value_raw * 0.0001
+        value_factor = float(active_schema.unit_to_10k.get(unit, 1.0))
+        value_10k = value_raw * value_factor
 
         out.append(
             {
@@ -160,7 +197,7 @@ def extract_candidates(province: str, url: str, text: str, year: int = 2023) -> 
                 "value_raw": value_raw,
                 "unit": unit,
                 "value_10k": round(value_10k, 6),
-                "score": score(province, sentence, url, year=year),
+                "score": score(province, sentence, url, year=year, schema=active_schema),
                 "explicit_province_in_sentence": has_explicit_province,
             }
         )
@@ -189,24 +226,32 @@ def dedup(candidates: list[dict[str, object]]) -> list[dict[str, object]]:
     return deduplicated
 
 
-def score_search_result(province: str, year: int, title: str, snippet: str) -> int:
+def score_search_result(
+    province: str,
+    year: int,
+    title: str,
+    snippet: str,
+    schema: ExtractorSchema | None = None,
+) -> int:
+    active_schema = _resolve_schema(schema)
     text = f"{title} {snippet}"
     short = PROV_ALIAS.get(province, [province.replace("省", "").replace("市", "")])[0]
     score_value = 0
+
     if short in text or province in text:
-        score_value += 4
-    if "保有量" in text:
-        score_value += 4
-    if "新能源" in text:
-        score_value += 3
+        score_value += _weight(active_schema, "search_province", 4)
+
+    for term, bonus in active_schema.search_positive_terms.items():
+        marker = term.replace("{year}", str(year))
+        if marker and marker in text:
+            score_value += int(bonus)
+
+    for term, penalty in active_schema.search_negative_terms.items():
+        marker = term.replace("{year}", str(year))
+        if marker and marker in text:
+            score_value += int(penalty)
+
     if str(year) in text:
-        score_value += 3
-    if "统计公报" in text or "政府" in text or "公安" in text:
-        score_value += 3
-    if "国民经济和社会发展" in text:
-        score_value += 2
-    if "全国" in text:
-        score_value -= 4
-    if "全市" in text or "某市" in text:
-        score_value -= 3
+        score_value += _weight(active_schema, "search_year", 3)
+
     return score_value
