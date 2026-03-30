@@ -8,7 +8,6 @@ QC Checker — 数据质量检查工具
 from __future__ import annotations
 
 import argparse
-import csv
 import logging
 import re
 import sys
@@ -17,6 +16,7 @@ from typing import TypeAlias
 
 from pydantic import ValidationError
 
+from tools.io import load_csv
 from tools.models import parse_panel_row
 
 Row: TypeAlias = dict[str, str]
@@ -24,11 +24,6 @@ DuplicateKey: TypeAlias = tuple[str, ...]
 RequiredIssue: TypeAlias = tuple[int, str, str, str]
 UnitIssue: TypeAlias = tuple[int, str, str, str, str, str]
 InputIssue: TypeAlias = tuple[int, str]
-
-
-def load_csv(path: str) -> list[Row]:
-    with open(path, encoding="utf-8-sig") as f:
-        return [dict(row) for row in csv.DictReader(f)]
 
 
 def check_uniqueness(rows: list[Row], key_cols: list[str]) -> dict[DuplicateKey, int]:

@@ -15,56 +15,12 @@ python scripts/run_round.py \
 from __future__ import annotations
 
 import argparse
-import csv
 import datetime as dt
 import logging
 import os
-from collections import defaultdict
 
-from tools.province_mapper import PROVINCE_MAP, normalize
-
-
-def load_csv(path: str) -> list[dict]:
-    with open(path, encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
-
-
-def parse_years(year_start: int, year_end: int) -> list[int]:
-    if year_start > year_end:
-        raise ValueError("year-start 不能大于 year-end")
-    return list(range(year_start, year_end + 1))
-
-
-def compute_missing(rows: list[dict], years: list[int], value_col: str) -> dict[int, list[str]]:
-    provinces = list(PROVINCE_MAP.keys())  # 30省短名
-    covered_by_year: dict[int, set[str]] = defaultdict(set)
-
-    for r in rows:
-        try:
-            year = int((r.get("year") or "").strip())
-        except ValueError:
-            continue
-        if year not in years:
-            continue
-
-        value = (r.get(value_col) or "").strip()
-        if not value:
-            continue
-
-        prov_raw = (r.get("province") or "").strip()
-        if not prov_raw:
-            continue
-        try:
-            prov = normalize(prov_raw, "short")
-        except ValueError:
-            continue
-        covered_by_year[year].add(prov)
-
-    missing_by_year: dict[int, list[str]] = {}
-    for y in years:
-        missing = [p for p in provinces if p not in covered_by_year[y]]
-        missing_by_year[y] = missing
-    return missing_by_year
+from tools.coverage import compute_missing
+from tools.io import load_csv
 
 
 def render_keyword_template(template: str, year: int, keyword_name: str, value_col: str) -> str:
@@ -174,7 +130,9 @@ def main():
     args = parser.parse_args()
 
     rows = load_csv(args.data)
-    years = parse_years(args.year_start, args.year_end)
+    if args.year_start > args.year_end:
+        raise ValueError("year-start 不能大于 year-end")
+    years = list(range(args.year_start, args.year_end + 1))
     missing_by_year = compute_missing(rows, years, args.value_col)
     keyword_name = args.keyword_name or args.value_col
     keyword_templates = [x for x in [args.keyword_template1, args.keyword_template2] if (x or "").strip()]

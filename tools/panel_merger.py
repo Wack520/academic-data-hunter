@@ -7,27 +7,15 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import csv
 import logging
 from typing import Literal, TypeAlias, cast
 
+from tools.io import load_csv, save_csv
 from tools.province_mapper import normalize
 
 Row: TypeAlias = dict[str, str]
 PanelKey: TypeAlias = tuple[str, ...]
 ProvinceMapTarget: TypeAlias = Literal["short", "full"]
-
-
-def load_csv(path: str) -> list[Row]:
-    with open(path, encoding="utf-8-sig") as f:
-        return [dict(row) for row in csv.DictReader(f)]
-
-
-def save_csv(rows: list[Row], path: str, fieldnames: list[str]) -> None:
-    with open(path, "w", encoding="utf-8-sig", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fieldnames)
-        w.writeheader()
-        w.writerows(rows)
 
 
 def merge_panel(

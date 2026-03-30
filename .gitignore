@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs / temp
+*.log
+*.tmp
+*.bak
+_tmp_*
+tmp_*
+tmp/
+cases/**/tmp/
+
+# Generated round task files
+cases/**/next-round-task.md
+cases/**/auto-round-report.md

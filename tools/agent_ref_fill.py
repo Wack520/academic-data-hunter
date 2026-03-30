@@ -16,22 +16,11 @@ python tools/agent_ref_fill.py \
 from __future__ import annotations
 
 import argparse
-import csv
 import logging
 import re
 from pathlib import Path
 
-
-def load_csv(path: Path) -> list[dict]:
-    with path.open(encoding="utf-8-sig", newline="") as f:
-        return list(csv.DictReader(f))
-
-
-def save_csv(path: Path, rows: list[dict], fieldnames: list[str]):
-    with path.open("w", encoding="utf-8-sig", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fieldnames)
-        w.writeheader()
-        w.writerows(rows)
+from tools.io import load_csv, save_csv
 
 
 def parse_task_years(task_file: Path) -> set[str]:
@@ -89,7 +78,7 @@ def main():
         filled += 1
 
     fieldnames = list(data_rows[0].keys())
-    save_csv(data_file, data_rows, fieldnames)
+    save_csv(data_rows, data_file, fieldnames)
     logging.info("task years=%s", sorted(years) if years else "ALL")
     logging.info("scanned=%s, filled=%s, value_col=%s", scanned, filled, args.value_col)
 

@@ -25,24 +25,20 @@ python scripts/run_auto_rounds.py ^
 from __future__ import annotations
 
 import argparse
-import csv
 import datetime as dt
 import logging
 import os
 import shlex
 import subprocess
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from collections.abc import Iterable
 
+from tools.coverage import compute_missing
+from tools.io import load_csv
 from tools.province_mapper import PROVINCE_MAP, normalize
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-
-
-def load_csv(path: str) -> list[dict]:
-    with open(path, encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
 
 
 def parse_csv_list(raw: str) -> list[str]:
@@ -57,33 +53,6 @@ def run_command(cmd: Iterable[str] | str, cwd: str, shell: bool = False) -> int:
     result = subprocess.run(cmd_list, cwd=cwd)
     return result.returncode
 
-
-def compute_missing(rows: list[dict], years: list[int], value_col: str) -> dict[int, list[str]]:
-    provinces = list(PROVINCE_MAP.keys())
-    covered_by_year: dict[int, set[str]] = defaultdict(set)
-
-    for r in rows:
-        try:
-            y = int((r.get("year") or "").strip())
-        except ValueError:
-            continue
-        if y not in years:
-            continue
-        if not (r.get(value_col) or "").strip():
-            continue
-        prov_raw = (r.get("province") or "").strip()
-        if not prov_raw:
-            continue
-        try:
-            prov = normalize(prov_raw, "short")
-        except ValueError:
-            continue
-        covered_by_year[y].add(prov)
-
-    result: dict[int, list[str]] = {}
-    for y in years:
-        result[y] = [p for p in provinces if p not in covered_by_year[y]]
-    return result
 
 
 def _norm_value_for_key(col: str, raw: str) -> str:

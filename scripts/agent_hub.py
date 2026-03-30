@@ -63,8 +63,8 @@ def run_plan_then_auto(payload: dict) -> dict:
             "max_rounds",
             "min_gain",
             "patience",
-            "agent_cmd",
-            "validate_cmd",
+            # NOTE: agent_cmd / validate_cmd intentionally excluded
+            # to prevent RCE via /plan-auto-rounds endpoint.
             "report",
         ],
     )
@@ -233,8 +233,9 @@ class AgentHandler(BaseHTTPRequestHandler):
                     "max_rounds",
                     "min_gain",
                     "patience",
-                    "agent_cmd",
-                    "validate_cmd",
+                    # NOTE: agent_cmd / validate_cmd intentionally excluded
+                    # from API surface to prevent command injection.
+                    # Use CLI chat mode for custom agent commands.
                     "report",
                 ],
             )
