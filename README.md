@@ -32,14 +32,107 @@ python tools/qc_checker.py data/my-data.csv
 python tools/panel_merger.py --base panel.csv --new data/my-data.csv --on province,year
 ```
 
+## Codex Agent 回合化用法（推荐）
+
+先自动生成“下一轮缺口任务”：
+
+```bash
+python scripts/run_round.py \
+  --data cases/case01-nev-carbon/data/charging_piles_by_province.csv \
+  --value-col public_charging_piles \
+  --keyword-name 公共充电桩 \
+  --keyword-template1 "{省名} {keyword_name} {year} 保有量 台" \
+  --keyword-template2 "{省名} {keyword_name} {year} 截至 台" \
+  --year-start 2017 \
+  --year-end 2023 \
+  --top-years 2 \
+  --output cases/case01-nev-carbon/next-round-task.md
+```
+
+把 `next-round-task.md` 发给 Agent 执行后，回到仓库做一致性校验：
+
+```bash
+python scripts/validate_round.py \
+  --data cases/case01-nev-carbon/data/charging_piles_by_province.csv \
+  --registry cases/case01-nev-carbon/data/source_registry.csv \
+  --variable charging \
+  --value-col public_charging_piles \
+  --check-unit 台
+# 若要开启严格审计（C级必须有cross_check_url），追加:
+# --strict-c-cross-check
+```
+
+Case01 可直接一键执行完整QC：
+
+```bash
+python cases/case01-nev-carbon/scripts/qc_case01.py
+```
+
+## 自动多轮调度（可接任意Agent）
+
+先跑 dry-run（只出任务与评估报告）：
+
+```bash
+python scripts/run_auto_rounds.py \
+  --data cases/case01-nev-carbon/data/charging_piles_by_province.csv \
+  --value-col public_charging_piles \
+  --year-start 2017 \
+  --year-end 2023
+```
+
+接入 Agent 后，可用命令模板自动循环多轮：
+
+```bash
+python scripts/run_auto_rounds.py \
+  --data cases/case01-nev-carbon/data/charging_piles_by_province.csv \
+  --value-col public_charging_piles \
+  --year-start 2017 \
+  --year-end 2023 \
+  --agent-cmd "your_agent_runner --task {task_file}" \
+  --validate-cmd "python scripts/validate_round.py --data {data} --registry cases/case01-nev-carbon/data/source_registry.csv --variable charging --value-col public_charging_piles --check-unit 台 --strict-c-cross-check"
+```
+
+## Hybrid Agent（API + 交互）
+
+启动 API 进程：
+
+```bash
+python scripts/agent_hub.py serve --host 127.0.0.1 --port 8787
+```
+
+Planner 端点（借鉴 GPT-Researcher 路由）：
+
+```bash
+curl -X POST http://127.0.0.1:8787/plan-workflow ^
+  -H "Content-Type: application/json" ^
+  -d "{\"spec_file\":\"templates/research-spec-template.json\"}"
+```
+
+一体化端点（先 Planner，再 Auto Rounds）：
+
+```bash
+curl -X POST http://127.0.0.1:8787/plan-auto-rounds ^
+  -H "Content-Type: application/json" ^
+  -d "{\"spec_file\":\"templates/research-spec-template.json\",\"data\":\"cases/case01-nev-carbon/data/charging_piles_by_province.csv\",\"value_col\":\"public_charging_piles\",\"year_start\":2017,\"year_end\":2023}"
+```
+
+启动交互式模式：
+
+```bash
+python scripts/agent_hub.py chat
+```
+
 ## 项目结构
 
 ```
 ├── docs/           # 方法论文档
 ├── templates/      # 可复用模板（任务文档、进度汇报、来源台账）
 ├── tools/          # 通用工具（QC检查、面板合并、省份映射）
+├── scripts/        # 回合化脚手架（任务生成、结果校验、自动调度）
 ├── cases/          # 案例库
-│   └── case01-nev-carbon/  # 案例1：新能源车碳减排（30省面板）
+│   ├── case01-nev-carbon/  # 案例1（含 scripts/）
+│   ├── case02-nev-emission-controls/  # 案例2（含 scripts/）
+│   └── case03-population-10y/  # 案例3（含 scripts/）
 └── .agent/         # AI Agent 工作流配置
 ```
 
@@ -48,10 +141,93 @@ python tools/panel_merger.py --base panel.csv --new data/my-data.csv --on provin
 | # | 案例 | 变量 | 面板规模 | 状态 |
 |---|------|------|----------|------|
 | 01 | [新能源车碳减排](cases/case01-nev-carbon/) | 充电桩、公交车、发电量、燃油消耗等17个 | 30省×2012-2023 | ✅ 完成 |
+| 02 | [NEV+交通碳排放控制变量](cases/case02-nev-emission-controls/) | 交通碳排放估算、NEV、人均GDP、城镇化率、客/货运周转量、公路里程、第三产业占比 | 30省×2012-2023 | ✅ 完成 |
+| 03 | [全国近十年人口](cases/case03-population-10y/) | 年末常住人口（万人） | 30省×2015-2024 | 🚧 初始化 |
+
+### Case02 快速命令
+
+```bash
+python cases/case02-nev-emission-controls/scripts/collect_case02.py
+python cases/case02-nev-emission-controls/scripts/export_case02_xlsx.py
+python cases/case02-nev-emission-controls/scripts/qc_case02.py
+python cases/case02-nev-emission-controls/scripts/compare_case02_with_delivery.py
+python cases/case02-nev-emission-controls/scripts/discover_case02_nev_camoufox.py --resume --run-mode headless --output cases/case02-nev-emission-controls/tmp/camoufox_missing7_v2.json --engines google,bing,sogou,360 --max-pages 30 --fetch-workers 8
+python cases/case02-nev-emission-controls/scripts/report_case02_nev_strict_status.py --candidates cases/case02-nev-emission-controls/tmp/camoufox_missing7_v2.json --output cases/case02-nev-emission-controls/strict-nev-status.md
+python cases/case02-nev-emission-controls/scripts/run_case02_nev_strict_autopilot.py --rounds 3 --run-mode headless --max-pages 30 --max-fetch-pages 20 --fetch-workers 8 --engines google,tavily,bing,sogou,360 --skip-collect
+python scripts/organize_tmp_files.py
+python scripts/run_round.py --data cases/case02-nev-emission-controls/data/panel_case02_30prov_2012_2023.csv --value-col transport_co2_est_10k_ton --keyword-name 交通碳排放估算 --keyword-template1 "{省名} {keyword_name} {year}" --keyword-template2 "{省名} 交通运输 二氧化碳排放 {year}" --year-start 2012 --year-end 2023 --top-years 2 --output cases/case02-nev-emission-controls/next-round-task.md
+python scripts/run_auto_rounds.py --data cases/case02-nev-emission-controls/data/panel_case02_30prov_2012_2023.csv --value-col transport_co2_est_10k_ton --year-start 2012 --year-end 2023 --max-rounds 2 --task-output cases/case02-nev-emission-controls/next-round-task.md --report cases/case02-nev-emission-controls/auto-round-report.md
+```
+
+可选“快速参数”（降低等待与超时）：
+`--delay-min-ms 300 --delay-max-ms 700 --query-timeout-ms 18000 --request-timeout-sec 12`
+
+可选“增强搜索参数”（提高召回/并发）：
+`--engine-mode merge --province-workers 2 --fetch-workers 12 --per-domain-cap 4`
+
+### 快速新建“人口”案例
+
+```bash
+python cases/case03-population-10y/scripts/init_population_case.py --case-dir cases/case03-population-10y --year-start 2015 --year-end 2024
+```
+
+> 说明：`run_case02_nev_strict_autopilot.py` 已默认接入处理层（`process_web_data_pipeline.py`），
+> 每轮会自动生成 `processed_roundN/`（markdown归档 + schema抽取）。  
+> 如需仅搜索可加：`--skip-processing`  
+> 如需忽略历史续跑结果并清空 autopilot 旧产物：`--fresh-output --force`
+
+### 高级用户：Google + Tavily 混合搜索
+
+```bash
+# 推荐：把 Tavily Key 放环境变量
+set TAVILY_API_KEY=your_key_here
+
+# 用配置文件管理高级参数
+python cases/case02-nev-emission-controls/scripts/discover_case02_nev_camoufox.py \
+  --config templates/advanced-search-config.example.toml \
+  --resume \
+  --output cases/case02-nev-emission-controls/tmp/camoufox_missing7_advanced.json
+```
+
+### 高级用户：MCP（Tavily / Exa）检查
+
+```bash
+python scripts/check_mcp_servers.py
+# 可自定义必需项：
+# python scripts/check_mcp_servers.py --required tavily-proxy,exa-proxy
+```
+
+> 说明：MCP 属于 Agent 运行层能力；本仓库脚本层可配多引擎，MCP 由你本机 `~/.codex/config.toml` 管理。
+> 可参考模板：`templates/mcp-servers.example.toml`
+
+### 借鉴 ScrapeGraphAI 的数据处理分层（markdown + schema抽取）
+
+```bash
+# 1) 先拿 discover 候选JSON
+# 2) 再做内容归档与结构化抽取
+python scripts/process_web_data_pipeline.py \
+  --input-json cases/case02-nev-emission-controls/tmp/camoufox_missing7_v2.json \
+  --schema-file templates/extraction-schema-template.json \
+  --output-dir cases/case02-nev-emission-controls/tmp/processed \
+  --mode both
+```
+
+### 借鉴 GPT-Researcher 的 Planner 路由（任务拆解）
+
+```bash
+python scripts/plan_research_workflow.py \
+  --spec-file templates/research-spec-template.json
+```
+
+会自动生成：
+- `templates/research-spec-template.plan.json`
+- `templates/research-spec-template.plan.md`
 
 ## 核心方法论
 
 详见 [docs/methodology.md](docs/methodology.md)
+
+Codex 协作执行详见 [docs/codex-agent-playbook.md](docs/codex-agent-playbook.md)
 
 ```
 定义变量与口径 → API自动化抓取 → Web搜索补缺 → 人机协作深挖 → QC入库合并
