@@ -13,7 +13,6 @@ import csv
 import json
 import re
 import subprocess
-import sys
 import tempfile
 import textwrap
 import urllib.parse
@@ -22,9 +21,9 @@ from pathlib import Path
 
 import requests
 
+from tools.province_mapper import get_all_provinces
+
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "tools"))
-from province_mapper import get_all_provinces  # noqa: E402
 
 BASE_URL = "https://data.stats.gov.cn"
 CASE_DIR = ROOT / "cases" / "case03-population-10y"

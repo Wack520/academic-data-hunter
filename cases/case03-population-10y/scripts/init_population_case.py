@@ -7,12 +7,11 @@ from __future__ import annotations
 
 import argparse
 import csv
-import sys
 from pathlib import Path
 
+from tools.province_mapper import get_all_provinces
+
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "tools"))
-from province_mapper import get_all_provinces  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:

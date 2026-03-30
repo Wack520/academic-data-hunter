@@ -8,15 +8,14 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pandas as pd
 
+from tools.province_mapper import get_all_provinces, normalize
+
 ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = ROOT / "cases" / "case02-nev-emission-controls" / "data"
-sys.path.insert(0, str(ROOT / "tools"))
-from province_mapper import get_all_provinces, normalize  # noqa: E402
 
 
 def main() -> None:

@@ -1,16 +1,8 @@
 import copy
-import importlib
-import sys
-from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-TOOLS_DIR = ROOT / "tools"
-if str(TOOLS_DIR) not in sys.path:
-    sys.path.insert(0, str(TOOLS_DIR))
-
-merge_panel = importlib.import_module("panel_merger").merge_panel
+from tools.panel_merger import merge_panel
 
 
 @pytest.fixture

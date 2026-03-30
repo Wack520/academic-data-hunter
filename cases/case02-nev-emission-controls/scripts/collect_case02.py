@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-import sys
 import tempfile
 import textwrap
 import urllib.parse
@@ -21,11 +20,9 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-ROOT = Path(__file__).resolve().parents[3]
-TOOLS_DIR = ROOT / "tools"
+from tools.province_mapper import get_all_provinces, normalize
 
-sys.path.insert(0, str(TOOLS_DIR))
-from province_mapper import get_all_provinces, normalize  # noqa: E402
+ROOT = Path(__file__).resolve().parents[3]
 
 BASE_URL = "https://data.stats.gov.cn"
 CASE_DIR = ROOT / "cases" / "case02-nev-emission-controls"

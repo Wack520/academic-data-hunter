@@ -9,14 +9,9 @@ import argparse
 import contextlib
 import csv
 import logging
-import sys
 from typing import Literal, TypeAlias, cast
 
-try:
-    from province_mapper import normalize
-except ImportError:
-    sys.path.insert(0, ".")
-    from province_mapper import normalize
+from tools.province_mapper import normalize
 
 Row: TypeAlias = dict[str, str]
 PanelKey: TypeAlias = tuple[str, ...]

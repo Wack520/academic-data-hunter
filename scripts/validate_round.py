@@ -15,15 +15,10 @@ from __future__ import annotations
 import argparse
 import csv
 import logging
-import os
 import sys
 from collections import Counter
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
-from tools.qc_checker import check_required, check_uniqueness, check_unit  # noqa: E402
+from tools.qc_checker import check_required, check_uniqueness, check_unit
 
 
 def load_csv(path: str) -> list[dict]:
