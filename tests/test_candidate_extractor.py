@@ -228,9 +228,7 @@ class TestDedup:
 
 class TestScoreSearchResult:
     def test_ideal_result_high_score(self):
-        s = score_search_result(
-            "湖北省", 2023, "湖北省2023年新能源汽车保有量统计公报", "湖北新能源汽车保有量达67万辆"
-        )
+        s = score_search_result("湖北省", 2023, "湖北省2023年新能源汽车保有量统计公报", "湖北新能源汽车保有量达67万辆")
         assert s >= 14  # province(4) + 保有量(4) + 新能源(3) + year(3) + 统计公报(3)
 
     def test_nationwide_penalty(self):
