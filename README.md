@@ -195,6 +195,7 @@ set TAVILY_API_KEY=your_key_here
 # 用配置文件管理高级参数
 python cases/case02-nev-emission-controls/scripts/discover_case02_nev_camoufox.py \
   --config templates/advanced-search-config.example.toml \
+  --schema-file templates/candidate-extractor-schema.example.json \
   --resume \
   --output cases/case02-nev-emission-controls/tmp/camoufox_missing7_advanced.json
 ```
@@ -263,6 +264,8 @@ Codex 协作执行详见 [docs/codex-agent-playbook.md](docs/codex-agent-playboo
 4. 提交 PR
 
 更完整的协作规范见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+第二用户可复现性检查模板见 [docs/first-user-validation.md](docs/first-user-validation.md)。
 
 ## License
 
