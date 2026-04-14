@@ -24,13 +24,16 @@ UA = {"User-Agent": FETCH_USER_AGENT}
 
 _CACHE_MAX_SIZE = FETCH_CACHE_MAX_SIZE
 
-_aiohttp_mod: Any
-try:
-    import aiohttp as _aiohttp_mod  # type: ignore[import-untyped]
-except Exception:  # pragma: no cover - optional dependency
-    _aiohttp_mod = None
 
-aiohttp: Any = _aiohttp_mod
+def _load_aiohttp() -> Any:
+    try:
+        import aiohttp as aiohttp_module  # type: ignore[import-untyped]
+    except Exception:  # pragma: no cover - optional dependency
+        return None
+    return aiohttp_module
+
+
+aiohttp: Any = _load_aiohttp()
 
 _HAS_AIOHTTP = aiohttp is not None
 _FALLBACK_WARNED = False
