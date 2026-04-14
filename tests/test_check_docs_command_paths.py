@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 from scripts.check_docs_command_paths import _extract_python_script_refs, check_docs_command_paths
@@ -53,3 +55,15 @@ python -m ruff check .
     issue = issues[0]
     assert issue.markdown_file == (docs_dir / "guide.md").resolve()
     assert issue.script_ref == "scripts/not_exists.py"
+
+
+def test_check_docs_command_paths_cli_bootstraps_without_site_packages() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, "-S", "scripts/check_docs_command_paths.py", "--paths", "README.md"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout

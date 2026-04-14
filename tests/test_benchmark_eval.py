@@ -113,7 +113,10 @@ def test_run_benchmark_eval_reports_high_provenance_quality_with_registry_fallba
     assert report["metrics"]["source_quality_score"] == 70.0
     assert report["distributions"]["source_level"] == {"A": 1, "C": 1}
     assert report["metrics"]["overall_score"] > 60.0
-    assert json.loads(json_path.read_text(encoding="utf-8"))["metrics"]["overall_score"] == report["metrics"]["overall_score"]
+    assert (
+        json.loads(json_path.read_text(encoding="utf-8"))["metrics"]["overall_score"]
+        == report["metrics"]["overall_score"]
+    )
     assert "# Benchmark Eval Report" in md_path.read_text(encoding="utf-8")
 
 

@@ -24,6 +24,7 @@ UA = {"User-Agent": FETCH_USER_AGENT}
 
 _CACHE_MAX_SIZE = FETCH_CACHE_MAX_SIZE
 
+_aiohttp_mod: Any
 try:
     import aiohttp as _aiohttp_mod  # type: ignore[import-untyped]
 except Exception:  # pragma: no cover - optional dependency

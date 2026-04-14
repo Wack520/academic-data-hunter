@@ -18,8 +18,6 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from tools.logging_utils import configure_logging
-
 DEFAULT_SCAN_PATHS = ("README.md", "CONTRIBUTING.md", "docs", ".agent/workflows")
 IGNORE_DIRS = {".git", ".venv", "__pycache__", ".mypy_cache", ".pytest_cache", ".ruff_cache", "tmp"}
 
@@ -30,6 +28,10 @@ class CommandRefIssue:
     line_no: int
     script_ref: str
     checked_candidates: tuple[Path, ...]
+
+
+def configure_logging() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", force=True)
 
 
 def _iter_markdown_files(root: Path, scan_paths: list[str]) -> list[Path]:
