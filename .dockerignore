@@ -1,0 +1,14 @@
+.venv/
+.git/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+__pycache__/
+*.egg-info/
+tmp/
+cases/**/tmp/
+.coverage
+.env
+*.log
+*.tmp
+*.bak

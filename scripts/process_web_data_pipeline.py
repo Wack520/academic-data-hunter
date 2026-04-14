@@ -24,12 +24,10 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-UA = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    )
-}
+from tools.config import FETCH_USER_AGENT
+from tools.logging_utils import configure_logging
+
+UA = {"User-Agent": FETCH_USER_AGENT}
 
 
 @dataclass
@@ -212,7 +210,7 @@ def extract_by_schema(text: str, rules: list[FieldRule]) -> dict[str, dict]:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     args = parse_args()
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

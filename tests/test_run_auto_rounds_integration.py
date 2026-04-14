@@ -196,3 +196,36 @@ def test_run_auto_rounds_end_to_end_with_mock_agent(tmp_path: Path) -> None:
 
     validate_state = json.loads(validate_state_path.read_text(encoding="utf-8"))
     assert validate_state["calls"] == 2
+
+
+def test_run_auto_rounds_default_output_paths_follow_data_dir(tmp_path: Path) -> None:
+    data_path = tmp_path / "panel.csv"
+    _write_csv(
+        data_path,
+        [
+            {"province": "北京", "year": "2023", "target_value": "100"},
+            {"province": "天津", "year": "2023", "target_value": ""},
+        ],
+    )
+
+    run_cmd = [
+        sys.executable,
+        "scripts/run_auto_rounds.py",
+        "--data",
+        str(data_path),
+        "--value-col",
+        "target_value",
+        "--year-start",
+        "2023",
+        "--year-end",
+        "2023",
+        "--top-years",
+        "1",
+        "--max-rounds",
+        "1",
+    ]
+    result = subprocess.run(run_cmd, cwd=ROOT, capture_output=True, text=True, check=False)
+    assert result.returncode == 0, f"stdout={result.stdout}\nstderr={result.stderr}"
+
+    assert (tmp_path / "next-round-task.md").exists()
+    assert (tmp_path / "auto-round-report.md").exists()

@@ -15,6 +15,8 @@ env/
 Thumbs.db
 .idea/
 .vscode/
+.env
+.omx/
 
 # Logs / temp
 *.log
@@ -24,6 +26,12 @@ _tmp_*
 tmp_*
 tmp/
 cases/**/tmp/
+.coverage
+coverage.json
+coverage.xml
+htmlcov/
+templates/*.plan.json
+templates/*.plan.md
 
 # Generated round task files
 cases/**/next-round-task.md

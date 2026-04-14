@@ -21,6 +21,7 @@ import re
 from pathlib import Path
 
 from tools.io import load_csv, save_csv
+from tools.logging_utils import configure_logging
 
 
 def parse_task_years(task_file: Path) -> set[str]:
@@ -34,7 +35,7 @@ def make_key(row: dict, key_cols: list[str]) -> tuple:
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     parser = argparse.ArgumentParser(description="Reference Fill Agent")
     parser.add_argument("--task", required=True, help="任务文件")
     parser.add_argument("--data", required=True, help="待回填CSV")

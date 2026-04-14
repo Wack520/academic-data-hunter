@@ -16,10 +16,10 @@ from typing import TypeAlias
 
 from pydantic import ValidationError
 
-from tools.io import load_csv
+from tools.io import Row, load_csv
+from tools.logging_utils import configure_logging
 from tools.models import parse_panel_row
 
-Row: TypeAlias = dict[str, str]
 DuplicateKey: TypeAlias = tuple[str, ...]
 RequiredIssue: TypeAlias = tuple[int, str, str, str]
 UnitIssue: TypeAlias = tuple[int, str, str, str, str, str]
@@ -103,7 +103,7 @@ def print_coverage(rows: list[Row], cols: list[str]) -> None:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     parser = argparse.ArgumentParser(description="数据QC检查工具")
     parser.add_argument("csv_file", help="待检查的CSV文件")
     parser.add_argument("--key", default="province,year", help="主键列名(逗号分隔)")

@@ -19,8 +19,9 @@ import datetime as dt
 import logging
 import os
 
-from tools.coverage import compute_missing
+from tools.gap_analysis import compute_missing
 from tools.io import load_csv
+from tools.logging_utils import configure_logging
 
 
 def render_keyword_template(template: str, year: int, keyword_name: str, value_col: str) -> str:
@@ -108,7 +109,7 @@ def build_markdown(
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     parser = argparse.ArgumentParser(description="生成下一轮补缺任务文档")
     parser.add_argument("--data", required=True, help="输入CSV")
     parser.add_argument("--value-col", required=True, help="数值列名")

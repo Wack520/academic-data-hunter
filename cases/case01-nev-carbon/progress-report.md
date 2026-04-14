@@ -1,9 +1,11 @@
 # 数据搜集进度汇报（最新执行结果，2026-03-24）
 
+> 路径说明：本文档已统一使用仓库相对路径（`cases/case01-nev-carbon/data/`）。
+
 ## 本轮已执行（按优先级）
 
 ### 优先级1：公共充电桩补充
-- 已更新文件：`d:\Desk\app\math\data_collector\output\charging_piles_by_province.csv`
+- 已更新文件：`cases/case01-nev-carbon/data/charging_piles_by_province.csv`
 - 同步导出：`charging_piles_by_province.xlsx`
 - 结果：
   - 总记录由 **51条 → 66条**
@@ -12,7 +14,7 @@
   - 既有 A/B 级记录优先保留（同省同年去重按 A>B>C）
 
 ### 优先级2：全国纯电动公交车年度数据补充
-- 已重建文件：`d:\Desk\app\math\data_collector\output\national_ev_bus_annual.csv`
+- 已重建文件：`cases/case01-nev-carbon/data/national_ev_bus_annual.csv`
 - 同步导出：`national_ev_bus_annual.xlsx`
 - 采用策略：仅保留“可核验来源”数据，不做插值、不做AI生成
 - 当前可用年份（`national_bev_buses`）：
@@ -23,8 +25,8 @@
 - 其余年份未检索到可自由访问且可核验原值，按规则留空。
 
 ### 优先级3：合并主面板
-- 已更新文件：`d:\Desk\app\math\merged_output\panel_with_charging_buses_30prov.csv`
-- 同步导出：`panel_with_charging_buses_30prov.xlsx`
+- 已更新文件：`cases/case01-nev-carbon/data/panel_30prov_2012_2023.csv`
+- 同步导出：`panel_30prov_2012_2023.xlsx`
 - 合并规则：
   - 充电桩：按 `province + year` 左连接
   - 全国纯电动公交：按 `year` 广播到各省
@@ -33,7 +35,7 @@
   - `nev_buses` 非空：120（4年 × 30省）
 
 ## 来源台账
-- 已更新：`d:\Desk\app\math\data_collector\output\source_registry.csv`
+- 已更新：`cases/case01-nev-carbon/data/source_registry.csv`
 - 同步导出：`source_registry.xlsx`
 - 本轮新增/重构：
   - 充电桩来源ID（稳定哈希+固定ID）
@@ -56,14 +58,14 @@
 - 读取并核对：`charging_piles_by_province.csv`，按 2018-2022 年逐年识别缺失省份
 - 按“省名+年份+公共充电桩/充电基础设施”检索，优先尝试 in-en 站内路径
 - 新增可直接核验的省级数值后，回写：
-  - `data_collector/output/charging_piles_by_province.csv`
-  - `data_collector/output/charging_piles_by_province.xlsx`
+  - `cases/case01-nev-carbon/data/charging_piles_by_province.csv`
+  - `cases/case01-nev-carbon/data/charging_piles_by_province.xlsx`
 - 同步更新来源台账：
-  - `data_collector/output/source_registry.csv`
-  - `data_collector/output/source_registry.xlsx`
+  - `cases/case01-nev-carbon/data/source_registry.csv`
+  - `cases/case01-nev-carbon/data/source_registry.xlsx`
 - 重跑合并（充电桩来源ID同步）：
-  - `merged_output/panel_with_charging_buses_30prov.csv`
-  - `merged_output/panel_with_charging_buses_30prov.xlsx`
+  - `cases/case01-nev-carbon/data/panel_30prov_2012_2023.csv`
+  - `cases/case01-nev-carbon/data/panel_30prov_2012_2023.xlsx`
 
 ### 2) 本次新增数据（仅补缺，不覆盖已有省年）
 - 充电桩记录：**+9条**（66 → 75）
@@ -124,7 +126,7 @@
 - `source_registry.csv/.xlsx`：**36 → 38（+2）**
   - `SRC_CP_INEN_2018AUG_TOP10`
   - `SRC_CP_SINA_2021DEC_TOP5`
-- `panel_with_charging_buses_30prov.csv/.xlsx` 已重跑合并
+- `panel_30prov_2012_2023.csv/.xlsx` 已重跑合并
 
 ### 本轮QC
 - `province+year` 唯一性：通过（重复=0）
@@ -162,9 +164,9 @@
   - 或虽有数字但不满足“2022口径公共充电桩可直接核验文本值”，故按规则暂不入库。
 
 ### 4) 文件更新
-- `data_collector/output/charging_piles_by_province.csv/.xlsx`
-- `data_collector/output/source_registry.csv/.xlsx`
-- `merged_output/panel_with_charging_buses_30prov.csv/.xlsx`
+- `cases/case01-nev-carbon/data/charging_piles_by_province.csv/.xlsx`
+- `cases/case01-nev-carbon/data/source_registry.csv/.xlsx`
+- `cases/case01-nev-carbon/data/panel_30prov_2012_2023.csv/.xlsx`
 
 ### 5) 本轮QC
 - 充电桩记录：**85 → 86（+1）**

@@ -14,6 +14,7 @@ flowchart TD
     F --> G[qc_checker.py]
     G --> H[panel_merger.py]
     H --> I[进度报告 / source_registry]
+    I --> K[export_evidence_pack.py<br/>Evidence Pack Bundle]
     I --> J[run_auto_rounds.py<br/>增益评估与早停]
     J --> C
 ```
@@ -55,6 +56,7 @@ flowchart TD
     AH[scripts/agent_hub.py] --> RR
     AH --> AR
     AH --> VR
+    AH --> EP[export_evidence_pack.py]
 
     D2[cases/case02.../discover_case02_nev_camoufox.py] --> EN
     D2 --> FE
@@ -70,9 +72,11 @@ flowchart TD
 3. **输入先校验再处理**：使用 Pydantic 模型约束关键字段。  
 4. **可审计优先**：每次自动化轮次都要可追溯（任务文件、报告、台账）。  
 5. **可扩展搜索层**：新增搜索引擎只需实现 `SearchEngine` 并注册到 `registry`。  
+6. **交付物优先**：最终输出不止是 CSV，还应包含 `source_registry` 与 `evidence pack`。  
 
 ## 5. 运行模式
 
 - **本地脚本模式**：直接调用 `python scripts/*.py`
 - **Hub API 模式**：`python scripts/agent_hub.py serve ...`
 - **容器模式**：见仓库根目录 `Dockerfile` 和 `docker-compose.yml`
+- **Evidence Pack 模式**：`python scripts/export_evidence_pack.py ...`

@@ -6,6 +6,8 @@
 import logging
 from typing import Literal, TypeAlias
 
+from tools.logging_utils import configure_logging
+
 ProvinceRecord: TypeAlias = dict[str, str]
 ProvinceMap: TypeAlias = dict[str, ProvinceRecord]
 ProvinceTarget: TypeAlias = Literal["short", "full", "code"]
@@ -108,7 +110,7 @@ def get_all_provinces(target: ProvinceTarget = "short") -> list[str]:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     logging.info("30省短名: %s", get_all_provinces("short"))
     logging.info("映射测试:")
     for name in ["北京", "北京市", "内蒙古自治区", "广西壮族自治区"]:

@@ -1,0 +1,31 @@
+{
+  "topic": "示例：NEV 与交通碳排放面板",
+  "geography": "中国30省",
+  "time_range": "2012-2023",
+  "strict_mode": true,
+  "engine_stack": ["google", "tavily", "bing", "sogou", "360"],
+  "mcp_stack": ["tavily-proxy", "exa-proxy"],
+  "variables": [
+    {
+      "name": "gdp_per_capita_yuan",
+      "name_cn": "人均GDP",
+      "unit": "元/人",
+      "source_hint": "NBS API / 国家统计局",
+      "note": ""
+    },
+    {
+      "name": "transport_co2_10k_ton",
+      "name_cn": "交通碳排放",
+      "unit": "万吨",
+      "source_hint": "CEADs excel/pdf + 官网发布",
+      "note": ""
+    },
+    {
+      "name": "nev_stock_10k",
+      "name_cn": "新能源汽车保有量",
+      "unit": "万辆",
+      "source_hint": "省级政府网站动态页面，需浏览器抓取",
+      "note": ""
+    }
+  ]
+}

@@ -21,106 +21,32 @@ import logging
 import os
 import secrets
 import shlex
-import subprocess
-import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-MAX_REQUEST_BODY_BYTES = 1_048_576
-
-
-def run_script(script_name: str, args: list[str]) -> dict:
-    if "/" in script_name or os.path.sep in script_name:
-        script_path = os.path.join(ROOT, script_name)
-    else:
-        script_path = os.path.join(ROOT, "scripts", script_name)
-    cmd = [sys.executable, script_path, *args]
-    proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
-    return {
-        "ok": proc.returncode == 0,
-        "returncode": proc.returncode,
-        "command": cmd,
-        "stdout": proc.stdout,
-        "stderr": proc.stderr,
-    }
-
-
-def run_plan_then_auto(payload: dict) -> dict:
-    plan_args = payload_to_args(payload, ["spec_file", "out_json", "out_md"])
-    auto_args = payload_to_args(
-        payload,
-        [
-            "data",
-            "value_col",
-            "key",
-            "year_start",
-            "year_end",
-            "top_years",
-            "keyword_name",
-            "keyword_template1",
-            "keyword_template2",
-            "task_output",
-            "max_rounds",
-            "min_gain",
-            "patience",
-            # NOTE: agent_cmd / validate_cmd intentionally excluded
-            # to prevent RCE via /plan-auto-rounds endpoint.
-            "report",
-        ],
+try:
+    from scripts.agent_hub_common import (
+        args_list_to_payload,
+        missing_required_fields,
+        payload_to_args,
+        run_plan_then_auto,
+        run_script,
     )
+except ModuleNotFoundError:  # pragma: no cover - direct script execution fallback
+    from agent_hub_common import (
+        args_list_to_payload,
+        missing_required_fields,
+        payload_to_args,
+        run_plan_then_auto,
+        run_script,
+    )
+from tools.config import (
+    AGENT_HUB_DEFAULT_HOST,
+    AGENT_HUB_DEFAULT_PORT,
+    AGENT_HUB_MAX_REQUEST_BODY_BYTES,
+)
+from tools.logging_utils import configure_logging
 
-    plan_res = run_script("plan_research_workflow.py", plan_args)
-    if not plan_res["ok"]:
-        return {
-            "ok": False,
-            "stage": "plan",
-            "plan": plan_res,
-            "auto_rounds": None,
-        }
-
-    auto_res = run_script("run_auto_rounds.py", auto_args)
-    return {
-        "ok": auto_res["ok"],
-        "stage": "auto_rounds" if auto_res["ok"] else "auto_rounds_failed",
-        "plan": plan_res,
-        "auto_rounds": auto_res,
-    }
-
-
-def payload_to_args(payload: dict, allow_keys: list[str]) -> list[str]:
-    args: list[str] = []
-    for k in allow_keys:
-        if k not in payload:
-            continue
-        v = payload[k]
-        flag = f"--{k.replace('_', '-')}"
-        if isinstance(v, bool):
-            if v:
-                args.append(flag)
-            continue
-        if v is None:
-            continue
-        args.extend([flag, str(v)])
-    return args
-
-
-def args_list_to_payload(args: list[str]) -> dict:
-    payload: dict = {}
-    i = 0
-    while i < len(args):
-        tok = args[i]
-        if not tok.startswith("--"):
-            i += 1
-            continue
-        key = tok[2:].replace("-", "_")
-        # bool flag
-        if i + 1 >= len(args) or args[i + 1].startswith("--"):
-            payload[key] = True
-            i += 1
-            continue
-        payload[key] = args[i + 1]
-        i += 2
-    return payload
+MAX_REQUEST_BODY_BYTES = AGENT_HUB_MAX_REQUEST_BODY_BYTES
 
 
 class AgentHandler(BaseHTTPRequestHandler):
@@ -162,6 +88,22 @@ class AgentHandler(BaseHTTPRequestHandler):
             raise ValueError(f"payload too large: {len(raw)} bytes (max {self.max_request_body_bytes})")
         return json.loads(raw.decode("utf-8"))
 
+    def _reject_missing_required(self, payload: dict, required: list[str]) -> bool:
+        missing = missing_required_fields(payload, required)
+        if not missing:
+            return False
+        self._send_json(
+            400,
+            {
+                "ok": False,
+                "stage": "input_validation",
+                "error_code": "missing_required_fields",
+                "error": f"missing required fields: {', '.join(missing)}",
+                "missing_fields": missing,
+            },
+        )
+        return True
+
     def do_GET(self):
         if not self._require_auth():
             return
@@ -180,6 +122,8 @@ class AgentHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/run-round":
+            if self._reject_missing_required(payload, ["data", "value_col", "year_start", "year_end", "output"]):
+                return
             args = payload_to_args(
                 payload,
                 [
@@ -199,6 +143,8 @@ class AgentHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/validate-round":
+            if self._reject_missing_required(payload, ["data", "registry", "variable"]):
+                return
             args = payload_to_args(
                 payload,
                 [
@@ -217,6 +163,8 @@ class AgentHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/auto-rounds":
+            if self._reject_missing_required(payload, ["data", "value_col", "year_start", "year_end"]):
+                return
             args = payload_to_args(
                 payload,
                 [
@@ -244,6 +192,8 @@ class AgentHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/plan-workflow":
+            if self._reject_missing_required(payload, ["spec_file"]):
+                return
             args = payload_to_args(
                 payload,
                 [
@@ -257,13 +207,56 @@ class AgentHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/plan-auto-rounds":
+            if self._reject_missing_required(payload, ["spec_file", "data", "value_col", "year_start", "year_end"]):
+                return
             res = run_plan_then_auto(payload)
-            self._send_json(200 if res.get("ok") else 500, res)
+            stage = (res or {}).get("stage")
+            status = 200 if res.get("ok") else (400 if stage == "input_validation" else 500)
+            self._send_json(status, res)
             return
 
         if self.path == "/qc-case01":
             args = payload_to_args(payload, ["no_strict_c_cross_check"])
             res = run_script("cases/case01-nev-carbon/scripts/qc_case01.py", args)
+            self._send_json(200 if res["ok"] else 500, res)
+            return
+
+        if self.path == "/export-evidence-pack":
+            if self._reject_missing_required(payload, ["data", "registry", "output_dir"]):
+                return
+            args = payload_to_args(
+                payload,
+                [
+                    "data",
+                    "registry",
+                    "output_dir",
+                    "variable",
+                    "value_col",
+                    "key",
+                ],
+            )
+            res = run_script("export_evidence_pack.py", args)
+            self._send_json(200 if res["ok"] else 500, res)
+            return
+
+        if self.path == "/benchmark-eval":
+            if self._reject_missing_required(payload, ["data", "registry", "output_json"]):
+                return
+            args = payload_to_args(
+                payload,
+                [
+                    "data",
+                    "registry",
+                    "output_json",
+                    "output_md",
+                    "variable",
+                    "value_col",
+                    "key",
+                    "year_start",
+                    "year_end",
+                ],
+            )
+            res = run_script("run_benchmark_eval.py", args)
             self._send_json(200 if res["ok"] else 500, res)
             return
 
@@ -280,7 +273,8 @@ def serve(host: str, port: int, api_key: str):
     logging.info("Auth: enabled (Authorization: Bearer <api-key>)")
     logging.info(
         "Endpoints: GET /health, POST /run-round, /validate-round, "
-        "/auto-rounds, /plan-workflow, /plan-auto-rounds, /qc-case01"
+        "/auto-rounds, /plan-workflow, /plan-auto-rounds, /qc-case01, "
+        "/export-evidence-pack, /benchmark-eval"
     )
     server.serve_forever()
 
@@ -289,7 +283,8 @@ def chat():
     logging.info("Academic Data Hunter Interactive Agent")
     logging.info(
         "commands: run_round ..., validate_round ..., auto_rounds ..., "
-        "plan_workflow ..., plan_auto_rounds ..., qc_case01, exit"
+        "plan_workflow ..., plan_auto_rounds ..., qc_case01, export_evidence_pack ..., "
+        "benchmark_eval ..., exit"
     )
     while True:
         try:
@@ -314,6 +309,8 @@ def chat():
                 "  plan_auto_rounds --spec-file ... --data ... --value-col ... --year-start ... --year-end ..."
             )
             logging.info("  qc_case01")
+            logging.info("  export_evidence_pack --data ... --registry ... --output-dir ... --value-col ...")
+            logging.info("  benchmark_eval --data ... --registry ... --output-json ... --value-col ...")
             continue
 
         parts = shlex.split(line)
@@ -325,6 +322,8 @@ def chat():
             "auto_rounds": "run_auto_rounds.py",
             "plan_workflow": "plan_research_workflow.py",
             "qc_case01": "cases/case01-nev-carbon/scripts/qc_case01.py",
+            "export_evidence_pack": "export_evidence_pack.py",
+            "benchmark_eval": "run_benchmark_eval.py",
         }
         if cmd == "plan_auto_rounds":
             payload = args_list_to_payload(args)
@@ -352,13 +351,13 @@ def chat():
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     parser = argparse.ArgumentParser(description="Hybrid Agent Hub")
     sub = parser.add_subparsers(dest="mode", required=True)
 
     p_serve = sub.add_parser("serve", help="启动API服务")
-    p_serve.add_argument("--host", default="127.0.0.1")
-    p_serve.add_argument("--port", type=int, default=8787)
+    p_serve.add_argument("--host", default=AGENT_HUB_DEFAULT_HOST)
+    p_serve.add_argument("--port", type=int, default=AGENT_HUB_DEFAULT_PORT)
     p_serve.add_argument(
         "--api-key",
         default=os.environ.get("AGENT_HUB_API_KEY", ""),
@@ -369,7 +368,19 @@ def main():
 
     args = parser.parse_args()
     if args.mode == "serve":
-        serve(args.host, args.port, args.api_key)
+        backend = (os.environ.get("ADH_AGENT_HUB_BACKEND", "fastapi") or "fastapi").strip().lower()
+        if backend == "legacy":
+            serve(args.host, args.port, args.api_key)
+            return
+        try:
+            from scripts.agent_hub_fastapi import serve as fastapi_serve
+
+            logging.info("Using FastAPI backend for serve mode (set ADH_AGENT_HUB_BACKEND=legacy to fallback)")
+            fastapi_serve(args.host, args.port, args.api_key)
+            return
+        except Exception as exc:
+            logging.warning("FastAPI backend unavailable, fallback to legacy server: %s", exc)
+            serve(args.host, args.port, args.api_key)
     elif args.mode == "chat":
         chat()
 

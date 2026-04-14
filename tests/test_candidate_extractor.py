@@ -119,6 +119,11 @@ class TestScore:
         s = score("湖北省", sentence, "", year=2023)
         assert s >= 9  # partial year(5) + 全省(4)
 
+    def test_autonomous_region_fallback_alias(self):
+        sentence = "截至2023年底，全区新能源汽车保有量达80万辆"
+        s = score("广西壮族自治区", sentence, "https://gxzf.gov.cn/", year=2023)
+        assert s >= 12  # year marker + province-scope marker
+
 
 # ── _extract_value ────────────────────────────────────────────────
 

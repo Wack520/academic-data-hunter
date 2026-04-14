@@ -7,9 +7,11 @@ services:
     container_name: academic-data-hunter-agent-hub
     command: ["python", "scripts/agent_hub.py", "serve", "--host", "0.0.0.0", "--port", "8787"]
     environment:
-      AGENT_HUB_API_KEY: "dev-change-me"
+      AGENT_HUB_API_KEY: "${AGENT_HUB_API_KEY:?AGENT_HUB_API_KEY is required}"
     ports:
       - "8787:8787"
     volumes:
-      - ./:/app
+      - ./cases:/app/cases
+      - ./templates:/app/templates
+      - ./tmp:/app/tmp
     restart: unless-stopped

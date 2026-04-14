@@ -1,0 +1,38 @@
+# 高级搜索配置示例（供 discover_case02_nev_camoufox.py 使用）
+# 用法：
+#   python scripts/discover_case02_nev_camoufox.py --config templates/advanced-search-config.example.toml ...
+
+[discover]
+# 搜索引擎顺序（可选：sogou, 360, bing, google, tavily）
+engines = "google,tavily,bing,sogou,360"
+
+# 域名过滤（逗号分隔；空字符串表示不限域名）
+domain_filter = "gov.cn"
+
+# 速度 / 稳定性
+# 省份并发（每个worker独立浏览器；建议 1~3）
+province_workers = 1
+# 搜索模式：first（首个命中）/ merge（多引擎合并，推荐）
+engine_mode = "merge"
+# 每省同域名URL上限（0=不限制）
+per_domain_cap = 3
+max_pages = 30
+max_fetch_pages = 20
+fetch_workers = 8
+# 正文抓取模式：sync（线程池requests）/ async（asyncio批量抓取，推荐大批量）
+fetch_mode = "sync"
+delay_min_ms = 300
+delay_max_ms = 800
+query_timeout_ms = 18000
+request_timeout_sec = 12
+
+# Google 参数
+google_max_results = 15
+google_hl = "zh-CN"
+google_gl = ""
+
+# Tavily 参数（建议用环境变量 TAVILY_API_KEY，而不是写在文件里）
+tavily_api_key = ""
+tavily_endpoint = "https://api.tavily.com/search"
+tavily_max_results = 10
+tavily_topic = "general"

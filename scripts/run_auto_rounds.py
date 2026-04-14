@@ -34,8 +34,9 @@ import sys
 from collections import Counter
 from collections.abc import Iterable
 
-from tools.coverage import compute_missing
+from tools.gap_analysis import compute_missing
 from tools.io import load_csv
+from tools.logging_utils import configure_logging
 from tools.province_mapper import PROVINCE_MAP, normalize
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -123,7 +124,7 @@ def write_report(path: str, report_lines: list[str]):
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     parser = argparse.ArgumentParser(description="多轮自动调度")
     parser.add_argument("--data", required=True, help="目标数据CSV")
     parser.add_argument("--value-col", required=True, help="目标数值列（逗号分隔）")
@@ -134,7 +135,7 @@ def main():
     parser.add_argument("--keyword-name", default=None, help="关键词指标名")
     parser.add_argument("--keyword-template1", default="{省名} {keyword_name} {year} 保有量 台")
     parser.add_argument("--keyword-template2", default="{省名} {keyword_name} {year} 截至 台")
-    parser.add_argument("--task-output", default="cases/case01-nev-carbon/next-round-task.md", help="任务文件输出路径")
+    parser.add_argument("--task-output", default=None, help="任务文件输出路径（默认: 与 --data 同目录）")
     parser.add_argument("--max-rounds", type=int, default=5, help="最大轮数")
     parser.add_argument("--min-gain", type=int, default=1, help="单轮最小新增键数")
     parser.add_argument("--patience", type=int, default=1, help="连续低增益容忍轮数")
@@ -142,7 +143,7 @@ def main():
         "--agent-cmd", default=None, help="Agent执行命令模板（支持 {task_file}/{round}/{data}/{repo_root}）"
     )
     parser.add_argument("--validate-cmd", default=None, help="校验命令模板（同上占位符）")
-    parser.add_argument("--report", default="cases/case01-nev-carbon/auto-round-report.md", help="报告输出md")
+    parser.add_argument("--report", default=None, help="报告输出md（默认: 与 --data 同目录）")
     args = parser.parse_args()
 
     key_cols = parse_csv_list(args.key)
@@ -151,6 +152,10 @@ def main():
         raise ValueError("--value-col 不能为空")
     if args.year_start > args.year_end:
         raise ValueError("--year-start 不能大于 --year-end")
+
+    data_dir = os.path.dirname(os.path.abspath(args.data))
+    task_output = args.task_output or os.path.join(data_dir, "next-round-task.md")
+    report_output = args.report or os.path.join(data_dir, "auto-round-report.md")
 
     years = list(range(args.year_start, args.year_end + 1))
     report_lines = []
@@ -210,18 +215,18 @@ def main():
             "--keyword-template2",
             args.keyword_template2,
             "--output",
-            args.task_output,
+            task_output,
         ]
         if run_command(run_round_cmd, cwd=ROOT) != 0:
             report_lines.append("- 任务生成失败，停止。")
             report_lines.append("")
             break
-        report_lines.append(f"- 任务文件：`{args.task_output}`")
+        report_lines.append(f"- 任务文件：`{task_output}`")
 
         # 2) 调用agent（可选）
         if args.agent_cmd:
             rendered = args.agent_cmd.format(
-                task_file=args.task_output,
+                task_file=task_output,
                 round=r,
                 data=args.data,
                 repo_root=ROOT,
@@ -241,7 +246,7 @@ def main():
         # 3) 校验（可选）
         if args.validate_cmd:
             rendered = args.validate_cmd.format(
-                task_file=args.task_output,
+                task_file=task_output,
                 round=r,
                 data=args.data,
                 repo_root=ROOT,
@@ -287,8 +292,8 @@ def main():
     report_lines.append(f"- 各年份覆盖（按任一value-col有值）：{final_stats['per_year_filled']}")
     report_lines.append("")
 
-    write_report(args.report, report_lines)
-    logging.info("已输出报告: %s", args.report)
+    write_report(report_output, report_lines)
+    logging.info("已输出报告: %s", report_output)
 
 
 if __name__ == "__main__":

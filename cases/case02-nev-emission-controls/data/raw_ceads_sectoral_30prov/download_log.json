@@ -1,0 +1,123 @@
+[
+  {
+    "id": "970",
+    "year": 2012,
+    "title": "2012年30个省份排放清单",
+    "status_code": 200,
+    "final_url": "https://www.ceads.net/user/dl.php?id=970&lang=cn",
+    "content_type": "application/octet-stream",
+    "content_disposition": "attachment; filename=2012%E5%B9%B430%E4%B8%AA%E7%9C%81%E4%BB%BD%E6%8E%92%E6%94%BE%E6%B8%85%E5%8D%95.xlsx",
+    "size": 290834,
+    "saved": "D:\\Desk\\app\\academic-data-hunter\\cases\\case02-nev-emission-controls\\data\\raw_ceads_sectoral_30prov\\2012年30个省份排放清单.xlsx"
+  },
+  {
+    "id": "971",
+    "year": 2013,
+    "title": "2013年30个省份排放清单",
+    "status_code": 200,
+    "final_url": "https://www.ceads.net/user/dl.php?id=971&lang=cn",
+    "content_type": "application/octet-stream",
+    "content_disposition": "attachment; filename=2013%E5%B9%B430%E4%B8%AA%E7%9C%81%E4%BB%BD%E6%8E%92%E6%94%BE%E6%B8%85%E5%8D%95.xlsx",
+    "size": 290338,
+    "saved": "D:\\Desk\\app\\academic-data-hunter\\cases\\case02-nev-emission-controls\\data\\raw_ceads_sectoral_30prov\\2013年30个省份排放清单.xlsx"
+  },
+  {
+    "id": "972",
+    "year": 2014,
+    "title": "2014年30个省份排放清单",
+    "status_code": 200,
+    "final_url": "https://www.ceads.net/user/dl.php?id=972&lang=cn",
+    "content_type": "application/octet-stream",
+    "content_disposition": "attachment; filename=2014%E5%B9%B430%E4%B8%AA%E7%9C%81%E4%BB%BD%E6%8E%92%E6%94%BE%E6%B8%85%E5%8D%95.xlsx",
+    "size": 289496,
+    "saved": "D:\\Desk\\app\\academic-data-hunter\\cases\\case02-nev-emission-controls\\data\\raw_ceads_sectoral_30prov\\2014年30个省份排放清单.xlsx"
+  },
+  {
+    "id": "973",
+    "year": 2015,
+    "title": "2015年30个省份排放清单",
+    "status_code": 200,
+    "final_url": "https://www.ceads.net/user/dl.php?id=973&lang=cn",
+    "content_type": "application/octet-stream",
+    "content_disposition": "attachment; filename=2015%E5%B9%B430%E4%B8%AA%E7%9C%81%E4%BB%BD%E6%8E%92%E6%94%BE%E6%B8%85%E5%8D%95.xlsx",
+    "size": 288005,
+    "saved": "D:\\Desk\\app\\academic-data-hunter\\cases\\case02-nev-emission-controls\\data\\raw_ceads_sectoral_30prov\\2015年30个省份排放清单.xlsx"
+  },
+  {
+    "id": "974",
+    "year": 2016,
+    "title": "2016年30个省份排放清单",
+    "status_code": 200,
+    "final_url": "https://www.ceads.net/user/dl.php?id=974&lang=cn",
+    "content_type": "application/octet-stream",
+    "content_disposition": "attachment; filename=2016%E5%B9%B430%E4%B8%AA%E7%9C%81%E4%BB%BD%E6%8E%92%E6%94%BE%E6%B8%85%E5%8D%95.xlsx",
+    "size": 282498,
+    "saved": "D:\\Desk\\app\\academic-data-hunter\\cases\\case02-nev-emission-controls\\data\\raw_ceads_sectoral_30prov\\2016年30个省份排放清单.xlsx"
+  },
+  {
+    "id": "975",
+    "year": 2017,
+    "title": "2017年30个省份排放清单",
+    "status_code": 200,
+    "final_url": "https://www.ceads.net/user/dl.php?id=975&lang=cn",
+    "content_type": "application/octet-stream",
+    "content_disposition": "attachment; filename=2017%E5%B9%B430%E4%B8%AA%E7%9C%81%E4%BB%BD%E6%8E%92%E6%94%BE%E6%B8%85%E5%8D%95.xlsx",
+    "size": 282964,
+    "saved": "D:\\Desk\\app\\academic-data-hunter\\cases\\case02-nev-emission-controls\\data\\raw_ceads_sectoral_30prov\\2017年30个省份排放清单.xlsx"
+  },
+  {
+    "id": "1096",
+    "year": 2018,
+    "title": "2018年30个省份排放清单",
+    "status_code": 200,
+    "final_url": "https://www.ceads.net/user/dl.php?id=1096&lang=cn",
+    "content_type": "application/octet-stream",
+    "content_disposition": "attachment; filename=2018%E5%B9%B430%E4%B8%AA%E7%9C%81%E4%BB%BD%E6%8E%92%E6%94%BE%E6%B8%85%E5%8D%95.xlsx",
+    "size": 282461,
+    "saved": "D:\\Desk\\app\\academic-data-hunter\\cases\\case02-nev-emission-controls\\data\\raw_ceads_sectoral_30prov\\2018年30个省份排放清单.xlsx"
+  },
+  {
+    "id": "1131",
+    "year": 2019,
+    "title": "2019年30个省份排放清单",
+    "status_code": 200,
+    "final_url": "https://www.ceads.net/user/dl.php?id=1131&lang=cn",
+    "content_type": "application/octet-stream",
+    "content_disposition": "attachment; filename=2019%E5%B9%B430%E4%B8%AA%E7%9C%81%E4%BB%BD%E6%8E%92%E6%94%BE%E6%B8%85%E5%8D%95.xlsx",
+    "size": 281451,
+    "saved": "D:\\Desk\\app\\academic-data-hunter\\cases\\case02-nev-emission-controls\\data\\raw_ceads_sectoral_30prov\\2019年30个省份排放清单.xlsx"
+  },
+  {
+    "id": "1398",
+    "year": 2020,
+    "title": "2020年30个省份排放清单",
+    "status_code": 200,
+    "final_url": "https://www.ceads.net/user/dl.php?id=1398&lang=cn",
+    "content_type": "application/octet-stream",
+    "content_disposition": "attachment; filename=2020%E5%B9%B430%E4%B8%AA%E7%9C%81%E4%BB%BD%E6%8E%92%E6%94%BE%E6%B8%85%E5%8D%95.xlsx",
+    "size": 278765,
+    "saved": "D:\\Desk\\app\\academic-data-hunter\\cases\\case02-nev-emission-controls\\data\\raw_ceads_sectoral_30prov\\2020年30个省份排放清单.xlsx"
+  },
+  {
+    "id": "1399",
+    "year": 2021,
+    "title": "2021年30个省份排放清单",
+    "status_code": 200,
+    "final_url": "https://www.ceads.net/user/dl.php?id=1399&lang=cn",
+    "content_type": "application/octet-stream",
+    "content_disposition": "attachment; filename=2021%E5%B9%B430%E4%B8%AA%E7%9C%81%E4%BB%BD%E6%8E%92%E6%94%BE%E6%B8%85%E5%8D%95.xlsx",
+    "size": 275083,
+    "saved": "D:\\Desk\\app\\academic-data-hunter\\cases\\case02-nev-emission-controls\\data\\raw_ceads_sectoral_30prov\\2021年30个省份排放清单.xlsx"
+  },
+  {
+    "id": "1454",
+    "year": 2022,
+    "title": "2022年30个省份排放清单",
+    "status_code": 200,
+    "final_url": "https://www.ceads.net/user/dl.php?id=1454&lang=cn",
+    "content_type": "application/octet-stream",
+    "content_disposition": "attachment; filename=2022%E5%B9%B430%E4%B8%AA%E7%9C%81%E4%BB%BD%E6%8E%92%E6%94%BE%E6%B8%85%E5%8D%95.xlsx",
+    "size": 275647,
+    "saved": "D:\\Desk\\app\\academic-data-hunter\\cases\\case02-nev-emission-controls\\data\\raw_ceads_sectoral_30prov\\2022年30个省份排放清单.xlsx"
+  }
+]

@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import csv
+import os
+import tempfile
 from pathlib import Path
 from typing import TypeAlias
 
@@ -18,12 +20,20 @@ def load_csv(path: str | Path) -> list[Row]:
 
 
 def save_csv(rows: list[Row], path: str | Path, fieldnames: list[str] | None = None) -> None:
-    """写入 CSV 文件。fieldnames 默认取第一行的 keys。"""
+    """写入 CSV 文件（原子写入：先写临时文件再 rename，防崩溃损坏）。"""
     if not rows:
         return
     if fieldnames is None:
         fieldnames = list(rows[0].keys())
-    with open(path, "w", encoding="utf-8-sig", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fieldnames)
-        w.writeheader()
-        w.writerows(rows)
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=target.parent, suffix=".tmp", prefix=target.stem)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8-sig", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=fieldnames)
+            w.writeheader()
+            w.writerows(rows)
+        Path(tmp_path).replace(target)
+    except BaseException:
+        Path(tmp_path).unlink(missing_ok=True)
+        raise

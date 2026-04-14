@@ -3,7 +3,9 @@
 ## 单条数据入库前
 
 - [ ] **来源URL存在**：`source_url` 不为空
+- [ ] **来源ID存在**：`source_id` 不为空且可在来源台账定位
 - [ ] **URL可访问**：点击能打开（或至少搜索时可访问）
+- [ ] **访问日期记录**：`access_date` 已填写
 - [ ] **单位正确**：已统一为目标单位（如"万台"→"台"需×10000）
 - [ ] **口径匹配**：确认是"年末保有量"而非"年度新增量"
 - [ ] **来源分级**：已标注 A/B/C
@@ -31,6 +33,9 @@
 ```bash
 python tools/qc_checker.py data/my-data.csv \
   --key province,year \
-  --required source_url \
+  --required source_url,source_id,access_date \
+  --value-col public_charging_piles \
   --check-unit 台
 ```
+
+> 说明：`--check-unit` 为轻量启发式检查，会提示“万/亿”等未换算单位风险。

@@ -6,20 +6,29 @@
 
 ```bash
 python -m pip install -r requirements-lock.txt
-python -m pip install -e .
-python -m pip install pre-commit
+python -m pip install -e ".[dev]"
 pre-commit install
 ```
 
 提交前建议本地执行：
 
 ```bash
+python scripts/check_dependency_sync.py
+python scripts/check_docs_command_paths.py
+python scripts/run_review_gate.py
+python scripts/summarize_workspace_changes.py
 python -m ruff check .
 python -m ruff format --check .
 python -m mypy tools/ --ignore-missing-imports
 python -m compileall -q scripts tools cases
 python -m pytest -q tests/
 ```
+
+依赖维护约定：
+
+- 运行时依赖以 `pyproject.toml` 的 `[project].dependencies` 为主
+- `requirements.txt` 与其保持一一同步（由 `scripts/check_dependency_sync.py` 守护）
+- 发行锁定版本使用 `requirements-lock.txt`（Python 3.11）
 
 ## 2) 提交流程约定
 

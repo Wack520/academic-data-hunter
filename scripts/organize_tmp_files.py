@@ -9,6 +9,8 @@ import argparse
 import logging
 from pathlib import Path
 
+from tools.logging_utils import configure_logging
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -20,7 +22,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     args = parse_args()
     target = ROOT / args.target
     files = []

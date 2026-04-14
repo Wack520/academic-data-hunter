@@ -21,15 +21,27 @@ dependencies = [
   "urllib3>=2.6,<3.0",
   "lxml>=5.2,<7.0",
   "pydantic>=2.8,<3.0",
+  "fastapi>=0.115,<1.0",
+  "uvicorn>=0.30,<1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
+  "ruff>=0.14,<1.0",
+  "mypy>=1.10,<2.0",
   "pytest>=8.0,<9.0",
   "coverage>=7.0,<8.0",
+  "httpx>=0.27,<1.0",
+  "pre-commit>=3.7,<4.0",
   "pip-tools>=7.0,<8.0",
+]
+async = [
+  "aiohttp>=3.10,<4.0",
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["tools*", "scripts*"]
+
+[tool.setuptools.package-data]
+tools = ["py.typed"]

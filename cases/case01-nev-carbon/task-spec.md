@@ -7,7 +7,7 @@
 1. **各省公共充电桩保有量**（台）— 30省 × 2016-2023
 2. **各省新能源公交车数量**（辆）— 30省 × 2012-2023
 
-最终输出合并到 `d:\Desk\app\math\merged_output\` 目录。
+最终输出统一保存到当前案例目录：`cases/case01-nev-carbon/data/`。
 
 ---
 
@@ -60,7 +60,7 @@
 ```
 
 ### 输出文件
-`d:\Desk\app\math\data_collector\output\charging_piles_by_province.csv`
+`cases/case01-nev-carbon/data/charging_piles_by_province.csv`
 
 字段：
 - `province, year, public_charging_piles`
@@ -92,7 +92,7 @@
 ```
 
 ### 输出文件
-`d:\Desk\app\math\data_collector\output\nev_buses_by_province.csv`
+`cases/case01-nev-carbon/data/nev_buses_by_province.csv`
 
 字段：
 - `province, year, nev_buses, data_type`
@@ -104,7 +104,7 @@
 
 ## 任务三：来源台账（必须独立保存）
 
-输出：`d:\Desk\app\math\data_collector\output\source_registry.csv`
+输出：`cases/case01-nev-carbon/data/source_registry.csv`
 
 字段建议：
 - `source_id`（唯一）
@@ -128,7 +128,7 @@
 - `nev_buses_data_type`
 
 输出：
-`d:\Desk\app\math\merged_output\panel_with_charging_buses_30prov.csv`
+`cases/case01-nev-carbon/data/panel_30prov_2012_2023.csv`
 
 ---
 

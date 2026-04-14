@@ -13,7 +13,6 @@ python scripts/validate_round.py \
 from __future__ import annotations
 
 import argparse
-import csv
 import logging
 import sys
 from collections import Counter
@@ -21,13 +20,10 @@ from collections.abc import Callable
 
 from pydantic import ValidationError
 
+from tools.io import load_csv
+from tools.logging_utils import configure_logging
 from tools.models import parse_panel_row, parse_source_record
 from tools.qc_checker import check_required, check_uniqueness, check_unit
-
-
-def load_csv(path: str) -> list[dict]:
-    with open(path, encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
 
 
 def has_value(row: dict, value_cols: list[str] | None) -> bool:
@@ -47,7 +43,7 @@ def validate_rows(rows: list[dict[str, str]], parser: Callable[[dict[str, str]],
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     parser = argparse.ArgumentParser(description="回合结果校验（QC + registry一致性）")
     parser.add_argument("--data", required=True, help="数据CSV")
     parser.add_argument("--registry", required=True, help="来源台账CSV")

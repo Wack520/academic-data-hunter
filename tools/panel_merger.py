@@ -10,10 +10,10 @@ import contextlib
 import logging
 from typing import Literal, TypeAlias, cast
 
-from tools.io import load_csv, save_csv
+from tools.io import Row, load_csv, save_csv
+from tools.logging_utils import configure_logging
 from tools.province_mapper import normalize
 
-Row: TypeAlias = dict[str, str]
 PanelKey: TypeAlias = tuple[str, ...]
 ProvinceMapTarget: TypeAlias = Literal["short", "full"]
 
@@ -51,7 +51,7 @@ def merge_panel(
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     parser = argparse.ArgumentParser(description="面板数据合并工具")
     parser.add_argument("--base", required=True, help="基础面板CSV")
     parser.add_argument("--new", required=True, help="新数据CSV")

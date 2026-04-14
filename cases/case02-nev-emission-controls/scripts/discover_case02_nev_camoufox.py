@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import contextlib
 import csv
 import json
@@ -35,7 +36,8 @@ from camoufox.sync_api import Camoufox
 from tools.candidate_extractor import dedup, extract_candidates, score_domain_quality, score_search_result
 from tools.engines import get_engine, supported_engines
 from tools.extractor_schema import ExtractorSchema, load_extractor_schema
-from tools.fetcher import get_or_fetch_text
+from tools.fetcher import fetch_many_texts_async, get_or_fetch_text
+from tools.logging_utils import configure_logging
 
 ROOT = Path(__file__).resolve().parents[3]
 CASE_DIR = ROOT / "cases" / "case02-nev-emission-controls"
@@ -127,6 +129,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--tavily-max-results", type=int, default=10, help="Tavily 每次query返回上限")
     parser.add_argument("--tavily-topic", default="general", help="Tavily topic: general/news")
     parser.add_argument("--fetch-workers", type=int, default=8, help="抓取候选URL正文的并发线程数")
+    parser.add_argument(
+        "--fetch-mode",
+        choices=["sync", "async"],
+        default="sync",
+        help="正文抓取模式：sync=线程池requests（默认） / async=asyncio批量抓取",
+    )
     parser.add_argument(
         "--province-workers",
         type=int,
@@ -354,6 +362,78 @@ def scan_url_for_candidates(
     return extract_candidates(province, url, text, year=year, schema=schema)
 
 
+def _attach_search_meta(candidates: list[dict[str, object]], meta: dict[str, Any]) -> list[dict[str, object]]:
+    for candidate in candidates:
+        candidate["search_score"] = meta.get("search_score", 0)
+        candidate["search_title"] = str(meta.get("title", ""))[:120]
+        candidate["search_query"] = meta.get("query", "")
+        candidate["search_engine"] = meta.get("engine", "")
+    return candidates
+
+
+def _collect_candidates_sync(
+    province: str,
+    fetch_targets: list[dict[str, Any]],
+    timeout_sec: int,
+    year: int,
+    schema: ExtractorSchema,
+    fetch_workers: int,
+) -> list[dict[str, object]]:
+    candidates: list[dict[str, object]] = []
+    with ThreadPoolExecutor(max_workers=max(1, int(fetch_workers))) as executor:
+        futures = {
+            executor.submit(
+                scan_url_for_candidates,
+                province,
+                str(item.get("url", "")),
+                int(timeout_sec),
+                year,
+                schema,
+            ): item
+            for item in fetch_targets
+            if str(item.get("url", "")).strip()
+        }
+        for future in as_completed(futures):
+            meta = futures[future]
+            try:
+                found = future.result()
+            except Exception:
+                continue
+            candidates.extend(_attach_search_meta(found, meta))
+    return candidates
+
+
+def _collect_candidates_async(
+    province: str,
+    fetch_targets: list[dict[str, Any]],
+    timeout_sec: int,
+    year: int,
+    schema: ExtractorSchema,
+    fetch_workers: int,
+) -> list[dict[str, object]]:
+    url_list = [str(item.get("url", "")).strip() for item in fetch_targets if str(item.get("url", "")).strip()]
+    if not url_list:
+        return []
+
+    results = asyncio.run(
+        fetch_many_texts_async(
+            url_list,
+            max_concurrency=max(1, int(fetch_workers)),
+            timeout_sec=int(timeout_sec),
+        )
+    )
+
+    meta_by_url = {str(item.get("url", "")).strip(): item for item in fetch_targets}
+    candidates: list[dict[str, object]] = []
+    for url in url_list:
+        ok, payload = results.get(url, (False, "missing result"))
+        if not ok:
+            continue
+        found = extract_candidates(province, url, payload, year=year, schema=schema)
+        candidates.extend(_attach_search_meta(found, meta_by_url.get(url, {})))
+    return candidates
+
+
 def process_single_province(
     browser: Any,
     province: str,
@@ -445,31 +525,24 @@ def process_single_province(
     selected = cap_urls_by_domain(ranked, max_pages=int(args.max_pages), per_domain_cap=int(args.per_domain_cap))
     fetch_targets = selected[:max_fetch_pages]
 
-    candidates: list[dict[str, object]] = []
-    with ThreadPoolExecutor(max_workers=max(1, int(args.fetch_workers))) as executor:
-        futures = {
-            executor.submit(
-                scan_url_for_candidates,
-                province,
-                item["url"],
-                int(args.request_timeout_sec),
-                args.year,
-                schema,
-            ): item
-            for item in fetch_targets
-        }
-        for future in as_completed(futures):
-            meta = futures[future]
-            try:
-                found = future.result()
-            except Exception:
-                continue
-            for candidate in found:
-                candidate["search_score"] = meta.get("search_score", 0)
-                candidate["search_title"] = str(meta.get("title", ""))[:120]
-                candidate["search_query"] = meta.get("query", "")
-                candidate["search_engine"] = meta.get("engine", "")
-            candidates.extend(found)
+    if args.fetch_mode == "async":
+        candidates = _collect_candidates_async(
+            province,
+            fetch_targets,
+            int(args.request_timeout_sec),
+            args.year,
+            schema,
+            int(args.fetch_workers),
+        )
+    else:
+        candidates = _collect_candidates_sync(
+            province,
+            fetch_targets,
+            int(args.request_timeout_sec),
+            args.year,
+            schema,
+            int(args.fetch_workers),
+        )
 
     deduplicated = dedup(candidates)
     top_n = deduplicated[: max(1, int(args.max_candidates))]
@@ -502,7 +575,7 @@ def process_single_province(
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     args = parse_args()
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -550,11 +623,12 @@ def main() -> None:
 
     max_fetch_pages = max(1, min(int(args.max_fetch_pages), int(args.max_pages)))
     logging.info(
-        "provinces=%s, engines=%s, engine_mode=%s, fetch_workers=%s, province_workers=%s, max_pages=%s, "
+        "provinces=%s, engines=%s, engine_mode=%s, fetch_mode=%s, fetch_workers=%s, province_workers=%s, max_pages=%s, "
         "max_fetch_pages=%s, per_domain_cap=%s, domain_filter=%s, schema=%s",
         len(to_run),
         engines,
         args.engine_mode,
+        args.fetch_mode,
         args.fetch_workers,
         args.province_workers,
         args.max_pages,

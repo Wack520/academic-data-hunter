@@ -15,6 +15,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
+from tools.logging_utils import configure_logging
+
 
 @dataclass
 class VariableItem:
@@ -182,7 +184,7 @@ def render_md(plan: dict) -> str:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    configure_logging()
     args = parse_args()
     spec_path = Path(args.spec_file)
     spec = load_spec(spec_path)

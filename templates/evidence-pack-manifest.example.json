@@ -1,0 +1,38 @@
+{
+  "generated_at_utc": "2026-04-14T00:00:00+00:00",
+  "data_file": "cases/case01-nev-carbon/data/charging_piles_by_province.csv",
+  "registry_file": "cases/case01-nev-carbon/data/source_registry.csv",
+  "output_dir": "tmp/evidence-pack/case01-charging",
+  "variable_filter": "charging",
+  "key_columns": [
+    "province",
+    "year"
+  ],
+  "value_columns": [
+    "public_charging_piles"
+  ],
+  "total_dataset_rows": 210,
+  "total_registry_rows": 24,
+  "registry_rows_in_scope": 24,
+  "evidence_record_count": 210,
+  "match_summary": {
+    "source_id": 210,
+    "source_tuple": 0,
+    "unmatched": 0
+  },
+  "source_level_summary": {
+    "A": 120,
+    "B": 70,
+    "C": 20
+  },
+  "unique_source_ids": [
+    "SRC_CP_38BD2FC3",
+    "SRC_CP_4724F6B8"
+  ],
+  "files": {
+    "dataset": "dataset.csv",
+    "source_registry": "source_registry.csv",
+    "evidence_records": "evidence_records.jsonl",
+    "summary": "README.md"
+  }
+}

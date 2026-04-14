@@ -35,6 +35,27 @@
 4. 验证接口：
    - `curl -H "Authorization: Bearer dev_key" http://127.0.0.1:8787/health`
 
+## 一键复现（推荐）
+
+可直接运行审核门禁脚本，自动执行依赖/文档命令/编译/测试/覆盖率检查并落盘报告：
+
+```bash
+python scripts/run_review_gate.py
+```
+
+默认生成：
+- `tmp/review/review-gate-latest.json`
+- `tmp/review/review-gate-latest.md`
+
+若当前工作区改动较多，可先生成分组摘要，降低审核噪音：
+
+```bash
+python scripts/summarize_workspace_changes.py
+```
+
+默认生成：
+- `tmp/review/workspace-change-summary.md`
+
 ## 常见卡点（持续更新）
 
 - Windows PowerShell 下引号转义导致 curl JSON 失败

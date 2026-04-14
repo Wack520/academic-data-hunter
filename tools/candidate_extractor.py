@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import functools
 import re
 from urllib.parse import urlparse
 
 from tools.extractor_schema import DEFAULT_EXTRACTOR_SCHEMA, ExtractorSchema
-from tools.province_mapper import PROVINCE_MAP
+from tools.province_mapper import PROVINCE_MAP, normalize
 
 PROV_ALIAS = {
     "内蒙古自治区": ["内蒙古", "全区", "我区"],
@@ -38,6 +39,49 @@ PROV_URL_HINTS = {
 
 # Derive from the single source of truth (province_mapper.PROVINCE_MAP)
 OTHER_PROV_HINTS: list[str] = list(PROVINCE_MAP.keys())
+
+
+def _fallback_short_name(province: str) -> str:
+    """Best-effort short name extraction for unknown entries."""
+    for suffix in [
+        "壮族自治区",
+        "回族自治区",
+        "维吾尔自治区",
+        "自治区",
+        "特别行政区",
+        "省",
+        "市",
+    ]:
+        if province.endswith(suffix):
+            return province[: -len(suffix)]
+    return province
+
+
+@functools.lru_cache(maxsize=128)
+def _province_alias(province: str) -> list[str]:
+    """Resolve province alias and scope markers for all provinces, not only overrides."""
+    if province in PROV_ALIAS:
+        return PROV_ALIAS[province]
+
+    try:
+        short = normalize(province, "short")
+        full = normalize(province, "full")
+    except ValueError:
+        short = _fallback_short_name(province)
+        full = province
+
+    markers: set[str] = set()
+    if "自治区" in full:
+        markers.update({"全区", "我区", "全省", "我省"})
+    if full.endswith("市"):
+        markers.update({"全市", "我市"})
+    if full.endswith("省") and "自治区" not in full:
+        markers.update({"全省", "我省"})
+    if not markers:
+        markers.update({"全省", "我省"})
+
+    ordered_markers = ["全省", "我省", "全区", "我区", "全市", "我市"]
+    return [short, *[marker for marker in ordered_markers if marker in markers]]
 
 
 def _resolve_schema(schema: ExtractorSchema | None) -> ExtractorSchema:
@@ -82,7 +126,7 @@ def score(
     schema: ExtractorSchema | None = None,
 ) -> int:
     active_schema = _resolve_schema(schema)
-    alias = PROV_ALIAS.get(province, [province.replace("省", "").replace("市", "")])
+    alias = _province_alias(province)
     explicit_name = alias[0]
     score_value = 0
 
@@ -161,7 +205,7 @@ def extract_candidates(
     schema: ExtractorSchema | None = None,
 ) -> list[dict[str, object]]:
     active_schema = _resolve_schema(schema)
-    alias = PROV_ALIAS.get(province, [province.replace("省", "").replace("市", "")])
+    alias = _province_alias(province)
     explicit_name = alias[0]
     lower_url = url.lower()
 
@@ -235,7 +279,7 @@ def score_search_result(
 ) -> int:
     active_schema = _resolve_schema(schema)
     text = f"{title} {snippet}"
-    short = PROV_ALIAS.get(province, [province.replace("省", "").replace("市", "")])[0]
+    short = _province_alias(province)[0]
     score_value = 0
 
     if short in text or province in text:
