@@ -43,7 +43,8 @@ def _iter_markdown_files(root: Path, scan_paths: list[str]) -> list[Path]:
             continue
         if p.is_dir():
             for md in p.rglob("*.md"):
-                if any(part in IGNORE_DIRS for part in md.parts):
+                relative_parts = md.relative_to(p).parts
+                if any(part in IGNORE_DIRS for part in relative_parts):
                     continue
                 files.append(md.resolve())
     return sorted(dict.fromkeys(files))

@@ -57,6 +57,17 @@ python -m ruff check .
     assert issue.script_ref == "scripts/not_exists.py"
 
 
+def test_check_docs_command_paths_does_not_ignore_scan_root_under_tmp_named_ancestor(tmp_path: Path) -> None:
+    root = tmp_path / "tmp" / "project"
+    docs_dir = root / "docs"
+    docs_dir.mkdir(parents=True)
+    (docs_dir / "guide.md").write_text("python scripts/not_exists.py --foo bar\n", encoding="utf-8")
+
+    issues = check_docs_command_paths(root, ["docs"])
+    assert len(issues) == 1
+    assert issues[0].script_ref == "scripts/not_exists.py"
+
+
 def test_check_docs_command_paths_cli_bootstraps_without_site_packages() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
