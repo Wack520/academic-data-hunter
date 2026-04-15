@@ -9,6 +9,8 @@
 [![Evidence Pack](https://img.shields.io/badge/Delivery-Evidence%20Pack-success)](docs/evidence-pack.md)
 [![Benchmark Eval](https://img.shields.io/badge/Reliability-Benchmark%20Eval-purple)](docs/benchmark-evals.md)
 
+![Academic Data Hunter banner](docs/assets/github-social-preview.png)
+
 ## TL;DR
 
 If you are building research agents, this repo gives you the layers that most demos skip:
@@ -23,6 +25,8 @@ In other words:
 
 > **it helps agents deliver auditable datasets, not just plausible answers.**
 
+**Best mental model:** this is the data-quality and provenance layer for research agents working on real-world datasets.
+
 ## Start Here
 
 - **Want the quickest proof?** → [Showcase](docs/showcase.md)
@@ -30,6 +34,9 @@ In other words:
 - **Want the delivery layer?** → [Evidence Pack](docs/evidence-pack.md)
 - **Want measurable quality?** → [Benchmark / Eval](docs/benchmark-evals.md)
 - **Want to plug it into an agent?** → [MCP Server](docs/mcp-server.md)
+- **Want real scenarios?** → [Use Cases](docs/use-cases.md)
+- **Want the future direction?** → [Roadmap](docs/roadmap.md)
+- **Want to contribute?** → [Contributing Guide](CONTRIBUTING.md)
 
 ## Why people would star this repo
 

@@ -1,0 +1,66 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07111F"/>
+      <stop offset="0.55" stop-color="#0B1F36"/>
+      <stop offset="1" stop-color="#102B48"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="211" y1="84" x2="1020" y2="530" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#67E8F9"/>
+      <stop offset="0.55" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+    <filter id="blur" x="-200" y="-200" width="1680" height="1040" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="80"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <g opacity="0.55" filter="url(#blur)">
+    <circle cx="233" cy="149" r="156" fill="#22D3EE"/>
+    <circle cx="1115" cy="525" r="168" fill="#8B5CF6"/>
+    <circle cx="900" cy="152" r="122" fill="#3B82F6"/>
+  </g>
+
+  <rect x="72" y="72" width="1136" height="496" rx="28" fill="rgba(7,17,31,0.48)" stroke="rgba(148,163,184,0.20)" stroke-width="2"/>
+
+  <g opacity="0.95">
+    <rect x="116" y="110" width="218" height="46" rx="23" fill="rgba(103,232,249,0.12)" stroke="rgba(103,232,249,0.35)"/>
+    <text x="142" y="140" fill="#A5F3FC" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="22" font-weight="700">PROVENANCE-FIRST</text>
+  </g>
+
+  <text x="116" y="236" fill="white" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="64" font-weight="800">Academic Data Hunter</text>
+  <text x="116" y="302" fill="#D6E7FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="34" font-weight="600">
+    Auditable research data agents
+  </text>
+  <text x="116" y="346" fill="#D6E7FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="34" font-weight="600">
+    with evidence packs and benchmarked dataset delivery
+  </text>
+
+  <text x="116" y="406" fill="#AFC7E8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="26" font-weight="500">
+    Source registry, QC, evidence records, and eval — not just plausible answers.
+  </text>
+
+  <g>
+    <rect x="116" y="450" width="200" height="52" rx="26" fill="url(#accent)"/>
+    <text x="149" y="483" fill="#07111F" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="24" font-weight="800">Evidence Pack</text>
+
+    <rect x="334" y="450" width="216" height="52" rx="26" fill="rgba(96,165,250,0.16)" stroke="rgba(96,165,250,0.35)"/>
+    <text x="369" y="483" fill="#DBEAFE" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="24" font-weight="700">Benchmark Eval</text>
+
+    <rect x="568" y="450" width="164" height="52" rx="26" fill="rgba(167,139,250,0.16)" stroke="rgba(167,139,250,0.35)"/>
+    <text x="607" y="483" fill="#E9D5FF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="24" font-weight="700">MCP Ready</text>
+  </g>
+
+  <g transform="translate(944 238)">
+    <rect width="220" height="246" rx="24" fill="rgba(9,22,39,0.82)" stroke="rgba(148,163,184,0.20)"/>
+    <text x="26" y="48" fill="#E2E8F0" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="24" font-weight="700">What ships</text>
+    <text x="26" y="89" fill="#67E8F9" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="22" font-weight="700">• source registry</text>
+    <text x="26" y="125" fill="#93C5FD" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="22" font-weight="700">• validation / QC</text>
+    <text x="26" y="161" fill="#C4B5FD" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="22" font-weight="700">• evidence records</text>
+    <text x="26" y="197" fill="#FDE68A" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="22" font-weight="700">• measurable quality</text>
+  </g>
+
+  <text x="116" y="560" fill="#7DD3FC" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="24" font-weight="700">github.com/Wack520/academic-data-hunter</text>
+</svg>
