@@ -3,6 +3,7 @@
 > Provenance-first infrastructure for auditable research data agents  
 > 面向高可信研究场景的可审计数据 Agent 基础设施
 
+[![CI](https://github.com/Wack520/academic-data-hunter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Wack520/academic-data-hunter/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![MCP Server](https://img.shields.io/badge/MCP-local%20stdio-blue)](docs/mcp-server.md)
 [![Evidence Pack](https://img.shields.io/badge/Delivery-Evidence%20Pack-success)](docs/evidence-pack.md)
@@ -21,6 +22,21 @@ If you are building research agents, this repo gives you the layers that most de
 In other words:
 
 > **it helps agents deliver auditable datasets, not just plausible answers.**
+
+## Start Here
+
+- **Want the quickest proof?** → [Showcase](docs/showcase.md)
+- **Want the core positioning?** → [Why this is not just another agent framework](docs/why-not-just-another-agent-framework.md)
+- **Want the delivery layer?** → [Evidence Pack](docs/evidence-pack.md)
+- **Want measurable quality?** → [Benchmark / Eval](docs/benchmark-evals.md)
+- **Want to plug it into an agent?** → [MCP Server](docs/mcp-server.md)
+
+## Why people would star this repo
+
+- **It solves a real research pain point**: collecting data is easy; collecting data with traceable provenance is not.
+- **It focuses on delivery quality**: source registry, QC, evidence pack, and benchmark eval are first-class outputs.
+- **It is opinionated in the right place**: not a generic chat wrapper, but infrastructure for auditable research workflows.
+- **It already contains real cases**: benchmarked examples make the project easier to trust, demo, and extend.
 
 ## 这是什么？
 

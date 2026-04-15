@@ -1,0 +1,53 @@
+name: Feature request
+description: Suggest a new workflow, case pattern, evidence/output enhancement, or integration.
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea.
+        The strongest requests explain the research workflow pain point, not just the feature itself.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the research / data / agent workflow pain point.
+      placeholder: I want to...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the change you want to see.
+      placeholder: Add a workflow / CLI / template / doc that...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Tell us what you do today if this feature does not exist.
+      placeholder: Right now I manually...
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area does this touch?
+      options:
+        - README / docs
+        - collection workflow
+        - source registry / provenance
+        - evidence pack
+        - benchmark / eval
+        - MCP / agent integration
+        - case templates
+        - CI / contributor workflow
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues first.
+        - label: This request is tied to a real workflow or user need.

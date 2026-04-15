@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Read the project positioning first
+    url: https://github.com/Wack520/academic-data-hunter/blob/main/docs/positioning.md
+    about: Learn what this repo is and is not before filing a broad request.
+  - name: Read the contribution guide
+    url: https://github.com/Wack520/academic-data-hunter/blob/main/CONTRIBUTING.md
+    about: See local setup and verification commands before contributing.

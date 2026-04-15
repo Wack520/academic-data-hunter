@@ -1,0 +1,61 @@
+name: Bug report
+description: Report a reproducible bug in collection, validation, evidence pack, eval, or docs workflows.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug report.
+        Please include a minimal reproduction and the exact command/output when possible.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the bug and why it is incorrect.
+      placeholder: Running `python scripts/...` produced an unexpected result...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps or commands.
+      placeholder: |
+        1. Run `...`
+        2. Open `...`
+        3. Observe `...`
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: The command should have...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output / traceback
+      description: Paste logs, error messages, or screenshots if helpful.
+      render: shell
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+      placeholder: "3.11 / 3.12 / 3.13 / 3.14"
+  - type: input
+    id: os
+    attributes:
+      label: OS / environment
+      placeholder: "Windows 11 / Ubuntu / GitHub Actions / WSL"
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues first.
+        - label: I included a minimal reproduction or exact command sequence.
+        - label: I included relevant logs or error output when available.
