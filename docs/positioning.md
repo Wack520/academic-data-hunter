@@ -1,42 +1,48 @@
-# Positioning
+# 定位说明
 
-## New category
+## 项目定位
 
-`academic-data-hunter` is no longer best described as a generic AI-agent toolkit.  
-The stronger category is:
+`academic-data-hunter` 的定位是：
 
-> **Provenance-first infrastructure for auditable research data agents**
+> **面向研究、竞赛与论文场景的可追溯数据采集与交付工具**
 
-## What problem it solves
+它的核心目标，是把“找数据”这件事做成一条可复用、可复核、可交付的流程。
 
-Most agent demos stop at “found an answer”. Real research work needs more:
+## 它解决什么问题
 
-- official-source-first collection
-- explicit source grading
-- reproducible datasets
-- row-level provenance
-- QC before delivery
+很多研究任务真正困难的部分，不是“搜到一点资料”，而是：
 
-This repository focuses on that layer.
+- 找到口径一致的数据
+- 记录清楚来源与出处
+- 做字段与结果校验
+- 交付可继续分析的数据表
+- 保留可复核的证据链
 
-## Who it is for
+这个项目聚焦的就是这条链路。
 
-- students and teams doing competition or paper-oriented research
-- research assistants collecting panel-style data
-- policy and consulting analysts who need source-backed datasets
-- developers building research agents that need a trustworthy data layer
+## 它提供什么
 
-## Not the main goal
+- 任务模板
+- 数据采集流程
+- 来源登记与分级
+- 质量校验
+- Evidence Pack 交付包
+- Benchmark Eval 结果评估
+- MCP Server 接入能力
 
-- not a generic chat UI
-- not a frontier-model playground
-- not a broad multi-agent platform
+## 适合谁用
 
-## Why this matters for open source
+- 做数学建模、统计建模、论文写作的数据收集者
+- 需要官方 / 半官方来源并要求可追溯的研究任务
+- 需要把 AI Agent 输出变成可交付数据资产的开发者
 
-This positioning gives the project a clearer moat:
+## 开源价值
 
-- domain-specific rigor
-- evidence-backed outputs
-- reproducible delivery workflows
-- compatibility with future MCP and agent-tool integrations
+这个项目的价值在于把研究型数据工作流里的关键环节落成了仓库资产：
+
+- 可复用模板
+- 可验证脚本
+- 可交付结果
+- 可扩展案例
+
+因此它更像一个围绕“研究数据交付”展开的工具仓库，而不是单纯的演示项目。
