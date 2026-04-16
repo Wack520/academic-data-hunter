@@ -86,7 +86,7 @@ cp templates/task-spec-template.md my-task.md
 
 ### 2）做数据校验
 
-```bash
+```powershell
 python scripts/validate_round.py ^
   --data cases/case01-nev-carbon/data/charging_piles_by_province.csv ^
   --registry cases/case01-nev-carbon/data/source_registry.csv ^
@@ -97,7 +97,7 @@ python scripts/validate_round.py ^
 
 ### 3）导出交付包
 
-```bash
+```powershell
 python scripts/export_evidence_pack.py ^
   --data cases/case01-nev-carbon/data/charging_piles_by_province.csv ^
   --registry cases/case01-nev-carbon/data/source_registry.csv ^
@@ -108,7 +108,7 @@ python scripts/export_evidence_pack.py ^
 
 ### 4）运行评估
 
-```bash
+```powershell
 python scripts/run_benchmark_eval.py ^
   --data cases/case01-nev-carbon/data/charging_piles_by_province.csv ^
   --registry cases/case01-nev-carbon/data/source_registry.csv ^

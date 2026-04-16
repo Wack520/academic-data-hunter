@@ -4,9 +4,9 @@
 
 ## 当前已有示例
 
-- 中国区域面板类任务
-- 控制变量补齐任务
-- 人口数据整理任务
+- [cases/case01-nev-carbon/](../cases/case01-nev-carbon/)：中国区域面板类任务
+- [cases/case02-nev-emission-controls/](../cases/case02-nev-emission-controls/)：控制变量补齐任务
+- [cases/case03-population-10y/](../cases/case03-population-10y/)：人口数据整理任务
 
 ## 后续方向
 
