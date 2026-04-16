@@ -1,31 +1,29 @@
-# Benchmark / Eval Foundation
+# Benchmark Eval 评估
 
-This project now includes a first benchmark/eval layer for research-data runs.
+Benchmark Eval 用来回答一个直接问题：
 
-## What it measures
+> 这次数据交付，质量到底怎么样？
 
-The current evaluator scores a run on:
+## 当前评估指标
 
-- **fill rate** — how much of the target panel is covered
-- **provenance completeness** — whether filled rows carry enough source context
-- **registry match rate** — whether dataset rows can be reconciled with the source registry
-- **C-level cross-check rate** — whether weaker sources were cross-checked
-- **source quality score** — weighted mix of A/B/C-level sources
+- **fill rate**：目标面板填充率
+- **provenance completeness**：来源信息完整度
+- **registry match rate**：数据表与来源台账匹配率
+- **C-level cross-check rate**：C 级来源交叉核验率
+- **source quality score**：来源质量分
 
-These roll up into a deterministic **overall score (0-100)**.
+这些指标会汇总成一个 **overall score（0-100）**。
 
-## Why this matters
+## 为什么需要它
 
-Agent demos often stop at “I found the data”. Real research workflows need to answer:
+研究型数据工作不只关心“找到了多少”，还关心：
 
-- How complete is this run?
-- How trustworthy are these rows?
-- Can a reviewer inspect the provenance?
-- Is this good enough to continue into modeling or writing?
+- 缺口还有多少
+- 来源是否完整
+- 台账是否对得上
+- 当前结果是否足够进入建模或写作
 
-This benchmark/eval layer is the first step toward public reliability benchmarks for research agents.
-
-## Usage
+## 运行命令
 
 ```bash
 python scripts/run_benchmark_eval.py ^
@@ -39,24 +37,11 @@ python scripts/run_benchmark_eval.py ^
   --output-md tmp/benchmark/case01-charging.md
 ```
 
-## Outputs
+## 输出文件
 
-- `*.json` — machine-readable metrics and counts
-- `*.md` — human-readable summary for review
+- `*.json`：给脚本或系统继续处理
+- `*.md`：给人直接查看
 
-## Current scoring model
+## 当前特点
 
-The first version uses stable heuristic weights:
-
-- fill rate: 35%
-- provenance completeness: 20%
-- registry match rate: 20%
-- source quality score: 15%
-- C-level cross-check rate: 10%
-
-This is intentionally simple for now. Later versions can add:
-
-- benchmark specs
-- task families
-- agent-vs-agent comparisons
-- public leaderboard/demo reports
+第一版评分模型故意保持简单、稳定、可解释，方便先把“研究数据交付是否可靠”量化出来。

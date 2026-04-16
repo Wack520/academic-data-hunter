@@ -1,45 +1,21 @@
-# Use Cases
+# 适用场景
 
-## 1. Academic competition data collection
+## 1. 数学建模 / 统计建模数据收集
 
-Input:
-- variable definition
-- year range
-- province range
+输入：变量定义、年份范围、省份范围。  
+输出：可直接进面板的数据表、来源台账、交付包。
 
-Output:
-- panel-ready CSV
-- source registry
-- evidence pack for review and defense
+## 2. 论文或课题助研
 
-## 2. Research assistant workflow
+输入：要求来源可追溯的数据任务。  
+输出：可继续分析、可交接复核的数据资产。
 
-Input:
-- supervisor asks for a sourced dataset
-- multiple variables must be collected from official or semi-official sources
+## 3. 政策 / 咨询研究
 
-Output:
-- reproducible workflow
-- clear missing-data report
-- reviewable provenance bundle
+输入：围绕主题搜集公开网页数据。  
+输出：带来源等级、交叉核验和证据记录的结果包。
 
-## 3. Policy / consulting research
+## 4. AI Agent 数据层
 
-Input:
-- topic-driven data search across public Chinese web sources
-
-Output:
-- source-graded records
-- cross-checkable claims
-- delivery package that another analyst can inspect
-
-## 4. Agent tooling layer
-
-Input:
-- an external agent needs safe, auditable research-data tools
-
-Output:
-- task generation
-- validation
-- evidence-pack export
-- future MCP-compatible tool surface
+输入：外部 Agent 需要一套可审计的数据工具。  
+输出：任务生成、校验、交付包导出、评估接口。

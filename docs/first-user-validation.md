@@ -1,20 +1,20 @@
-# First User Validation (Second-user Dry Run)
+# 首个外部用户验证
 
-目的：验证仓库文档是否能让**非作者**从零完成一次可复现实验。
+这份文档用于检查：一个**非作者**是否能从零跑通仓库里的最小工作流。
 
 ## 验证范围
 
-- 环境准备（依赖安装）
+- 环境准备
 - 基础检查（lint / mypy / pytest）
-- 跑通一个最小工作流（run_round -> validate_round）
-- Agent Hub API 的鉴权与基本路由
+- 跑通最小流程（`run_round -> validate_round`）
+- Agent Hub API 基本启动与鉴权
 
-## 执行记录模板
+## 建议检查项
 
 | 项目 | 结果 | 备注 |
 |---|---|---|
 | clone 仓库 | ☐/☑ | |
-| 安装依赖（requirements-lock） | ☐/☑ | |
+| 安装依赖 | ☐/☑ | |
 | `ruff check .` | ☐/☑ | |
 | `mypy tools/` | ☐/☑ | |
 | `pytest -q tests/` | ☐/☑ | |
@@ -23,10 +23,10 @@
 | `python scripts/agent_hub.py serve --api-key ...` | ☐/☑ | |
 | `GET /health`（带 Bearer） | ☐/☑ | |
 
-## 建议执行步骤
+## 推荐执行步骤
 
-1. 按 README 完成依赖安装。  
-2. 运行 CI 同款本地检查：
+1. 按 README 安装依赖。  
+2. 运行本地检查：
    - `python -m ruff check .`
    - `python -m mypy tools/ --ignore-missing-imports`
    - `python -m pytest -q tests/`
@@ -35,37 +35,19 @@
 4. 验证接口：
    - `curl -H "Authorization: Bearer dev_key" http://127.0.0.1:8787/health`
 
-## 一键复现（推荐）
-
-可直接运行审核门禁脚本，自动执行依赖/文档命令/编译/测试/覆盖率检查并落盘报告：
+## 一键复现
 
 ```bash
 python scripts/run_review_gate.py
 ```
 
 默认生成：
+
 - `tmp/review/review-gate-latest.json`
 - `tmp/review/review-gate-latest.md`
 
-若当前工作区改动较多，可先生成分组摘要，降低审核噪音：
+## 常见卡点
 
-```bash
-python scripts/summarize_workspace_changes.py
-```
-
-默认生成：
-- `tmp/review/workspace-change-summary.md`
-
-## 常见卡点（持续更新）
-
-- Windows PowerShell 下引号转义导致 curl JSON 失败
-- 本地 Python 版本与 lockfile 目标版本不一致
-- 未设置 `Authorization` 请求头导致 401
-
-## 反馈闭环
-
-请把第二用户遇到的问题回填到：
-
-- `README.md`（启动/命令示例）
-- `CONTRIBUTING.md`（提交流程/测试流程）
-- 本文档（卡点与修复记录）
+- Windows PowerShell 下引号转义问题
+- 本地 Python 版本与 lockfile 不一致
+- 请求缺少 `Authorization` 头导致 401

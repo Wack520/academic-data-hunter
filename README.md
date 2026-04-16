@@ -1,4 +1,4 @@
-# 🎯 Academic Data Hunter
+# Academic Data Hunter
 
 > 面向研究、竞赛与论文场景的可追溯数据采集与交付工具
 
@@ -42,12 +42,12 @@ Academic Data Hunter 用来把“找数据”变成“交付数据”。
 
 通过 **Benchmark Eval** 对交付质量打分，包括：
 
-- fill rate
-- provenance completeness
-- registry match rate
-- C 级来源 cross-check rate
-- source quality score
-- overall score
+- 填充率（fill rate）
+- 来源完整性（provenance completeness）
+- 台账匹配率（registry match rate）
+- C级来源交叉核验率（C-level cross-check rate）
+- 来源质量分（source quality score）
+- 总分（overall score）
 
 ## 适合谁用
 
@@ -115,23 +115,23 @@ python scripts/run_benchmark_eval.py ^
 
 | 指标 | 数值 |
 |---|---:|
-| fill rate | 40.95 |
-| provenance completeness | 100.00 |
-| registry match rate | 100.00 |
-| C-level cross-check rate | 100.00 |
-| source quality score | 59.53 |
-| overall score | 73.26 |
+| 填充率 | 40.95 |
+| 来源完整性 | 100.00 |
+| 台账匹配率 | 100.00 |
+| C级来源交叉核验率 | 100.00 |
+| 来源质量分 | 59.53 |
+| 总分 | 73.26 |
 
 ## 文档入口
 
-- [Showcase](docs/showcase.md)
-- [Use Cases](docs/use-cases.md)
-- [Evidence Pack](docs/evidence-pack.md)
-- [Benchmark Eval](docs/benchmark-evals.md)
-- [MCP Server](docs/mcp-server.md)
-- [Roadmap](docs/roadmap.md)
-- [Architecture](docs/architecture.md)
-- [Contributing Guide](CONTRIBUTING.md)
+- [项目展示](docs/showcase.md)
+- [适用场景](docs/use-cases.md)
+- [Evidence Pack 交付包](docs/evidence-pack.md)
+- [Benchmark Eval 评估](docs/benchmark-evals.md)
+- [MCP 接入](docs/mcp-server.md)
+- [路线图](docs/roadmap.md)
+- [架构说明](docs/architecture.md)
+- [贡献指南](CONTRIBUTING.md)
 
 ## 开发与贡献
 
@@ -145,8 +145,8 @@ python scripts/run_benchmark_eval.py ^
 开始前请先看：
 
 - [CONTRIBUTING.md](CONTRIBUTING.md)
-- [docs/first-user-validation.md](docs/first-user-validation.md)
+- [首次外部用户验证](docs/first-user-validation.md)
 
-## License
+## 许可证
 
 MIT

@@ -1,12 +1,18 @@
-# Showcase
+# 项目展示
 
-This page is the fastest way to understand what `academic-data-hunter` already proves.
+这份文档用来快速说明：这个项目现在已经能交付什么。
 
-## 1. It produces reviewable delivery artifacts
+## 1. 已有真实案例
 
-The project does not stop at “the agent found some data”.
+仓库里不是空模板，而是已经放了可直接查看的真实案例：
 
-A typical run can now output:
+- `case01-nev-carbon`
+- `case02-nev-emission-controls`
+- `case03-population-10y`
+
+## 2. 已能导出完整交付包
+
+一次任务的结果不只是一张表，还可以导出：
 
 ```text
 task spec
@@ -17,79 +23,33 @@ task spec
   -> benchmark report
 ```
 
-That makes it usable for:
+## 3. 已能量化评估结果
 
-- academic competition teams
-- research assistants
-- policy / consulting research
-- developers building research agents that need a trustworthy data layer
+来自 `case01-nev-carbon` 的一次真实评估结果：
 
-## 2. It already scores real runs
-
-Real Case01 benchmark result generated from:
-
-```bash
-python scripts/run_benchmark_eval.py ^
-  --data cases/case01-nev-carbon/data/charging_piles_by_province.csv ^
-  --registry cases/case01-nev-carbon/data/source_registry.csv ^
-  --variable charging ^
-  --value-col public_charging_piles ^
-  --year-start 2017 ^
-  --year-end 2023 ^
-  --output-json tmp/benchmark/case01-charging.json ^
-  --output-md tmp/benchmark/case01-charging.md
-```
-
-Observed metrics:
-
-| Metric | Value |
+| 指标 | 数值 |
 |---|---:|
-| fill rate | 40.95 |
-| provenance completeness | 100.00 |
-| registry match rate | 100.00 |
-| C-level cross-check rate | 100.00 |
-| source quality score | 59.53 |
-| overall score | 73.26 |
+| 填充率 | 40.95 |
+| 来源完整性 | 100.00 |
+| 台账匹配率 | 100.00 |
+| C级来源交叉核验率 | 100.00 |
+| 来源质量分 | 59.53 |
+| 总分 | 73.26 |
 
-## 3. It already ships evidence-backed outputs
+## 4. 已有可接入的工具入口
 
-Example evidence-pack layout:
+当前可用入口：
 
-```text
-tmp/evidence-pack/case01-charging/
-  manifest.json
-  dataset.csv
-  source_registry.csv
-  evidence_records.jsonl
-  README.md
-```
+- CLI 脚本
+- Agent Hub API
+- 本地 stdio MCP Server
 
-This is a much stronger public demo than a chat transcript.
+## 5. 项目当前最有价值的地方
 
-## 4. It is already integration-ready
+它把研究型数据工作里最容易被忽略的一层做成了可复用工具：
 
-Current integration surfaces:
-
-- **CLI** scripts
-- **Agent Hub API**
-- **local stdio MCP server**
-
-MCP tools exposed today:
-
-- `run_round`
-- `validate_round`
-- `export_evidence_pack`
-- `benchmark_eval`
-
-## 5. Why this is star-worthy
-
-This repo is interesting because it sits at the intersection of:
-
-- agent systems
-- data engineering
-- provenance / reliability
-- real-world research workflows
-
-Instead of competing with generic agent frameworks on orchestration alone, it focuses on the layer that most demos ignore:
-
-> **turning agent work into auditable, reviewable, reproducible research assets**
+- 数据采集
+- 来源登记
+- 质量校验
+- 交付包导出
+- 量化评估

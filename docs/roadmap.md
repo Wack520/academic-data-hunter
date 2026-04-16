@@ -1,32 +1,19 @@
-# Roadmap
+# 路线图
 
-## Phase 1 — Repositioning + evidence-pack delivery
+## 近期
 
-- reposition README and public docs
-- ship `export_evidence_pack.py`
-- expose evidence-pack export through Agent Hub
+- 继续补充可复用案例
+- 收紧 README 与公开文档
+- 优化新用户上手路径
 
-## Phase 2 — Benchmark / eval layer
+## 中期
 
-- ✅ first scoring foundation shipped (`scripts/run_benchmark_eval.py`)
-- public tasks with expected provenance rules
-- comparison across agent workflows
-- richer benchmark specs and report templates
+- 扩展 MCP 工具面
+- 完善 Benchmark Eval 指标与报告
+- 补更多研究数据任务模板
 
-## Phase 3 — MCP tool surface
+## 后续
 
-- ✅ local stdio MCP server shipped
-- expose task generation, validation, evidence-pack export, and benchmark eval as MCP tools
-- make the project easy to plug into external research agents
-
-## Phase 4 — Lightweight evidence inspector UI
-
-- review dashboard for evidence packs
-- source registry browser
-- row-level provenance inspection
-
-## Phase 5 — Public showcase assets
-
-- polished demo video / GIF
-- benchmark leaderboard examples
-- case-study writeups in English and Chinese
+- 增加交付包查看界面
+- 做更完整的案例展示
+- 提供更稳定的 Agent 集成体验

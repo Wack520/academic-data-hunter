@@ -1,34 +1,25 @@
-# MCP Server
+# MCP 接入
 
-`academic-data-hunter` now ships a minimal local MCP server over **stdio**.
+项目提供一个本地 **stdio MCP server**，让外部 MCP 客户端可以直接调用核心数据交付工具。
 
-## Why it exists
+## 它能做什么
 
-This turns the project from “a repository with scripts” into “a research-data tool layer” that external agent clients can call directly.
-
-## Current tools
+当前开放的工具有：
 
 - `run_round`
 - `validate_round`
 - `export_evidence_pack`
 - `benchmark_eval`
 
-## Start locally
+## 本地启动
 
 ```bash
 python scripts/mcp_server.py
 ```
 
-The server speaks line-delimited JSON-RPC over stdio and supports:
+服务通过 stdio 读写 JSON-RPC，适合作为本地研究数据工具层接入。
 
-- `initialize`
-- `tools/list`
-- `tools/call`
-- `ping`
-- `shutdown`
-- `exit`
-
-## 本地客户端配置示例（以 Codex 为例）
+## 客户端配置示例（以 Codex 为例）
 
 把下面片段加入本地 `~/.codex/config.toml`：
 
@@ -38,13 +29,9 @@ command = "python"
 args = ["<PROJECT_ROOT>/scripts/mcp_server.py"]
 ```
 
-把 `<PROJECT_ROOT>` 替换成你的仓库绝对路径后，即可通过 MCP 直接调用项目工具。
+把 `<PROJECT_ROOT>` 替换成你的仓库绝对路径即可。
 
-## Example tool call target
+## 建议先试的两个工具
 
-The most useful first calls are:
-
-- `export_evidence_pack`
-- `benchmark_eval`
-
-These are the best demo surfaces for auditable dataset delivery.
+- `export_evidence_pack`：看完整交付包
+- `benchmark_eval`：看一次数据交付的量化评估结果
