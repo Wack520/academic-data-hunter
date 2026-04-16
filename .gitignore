@@ -17,6 +17,7 @@ Thumbs.db
 .vscode/
 .env
 .omx/
+.worktrees/
 
 # Logs / temp
 *.log
