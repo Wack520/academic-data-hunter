@@ -66,17 +66,17 @@
 
 ## 阶段4：人机协作深挖
 
-利用多个AI Agent并行搜集：
+利用不同类型的 AI Agent 协作搜集：
 
 ```
-Antigravity: 初步搜索 + 编写任务文档
-     ↓
-Codex: 按任务文档逐省系统搜索
-     ↓
+任务组织型 Agent：准备任务文档与补缺策略
+        ↓
+执行型 Agent：按任务文档逐省逐年系统搜索
+        ↓
 合并去重 → QC → 入库
 ```
 
-**关键**：给AI Agent的任务文档要标准化（参见 [templates/task-spec-template.md](../templates/task-spec-template.md)）
+**关键**：给 AI Agent 的任务文档要标准化（参见 [templates/task-spec-template.md](../templates/task-spec-template.md)）
 
 **产出**：补充数据 + 更新的来源台账
 
