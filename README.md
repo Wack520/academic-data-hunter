@@ -80,43 +80,43 @@ task spec
 
 ### 1）准备任务模板
 
-```bash
-cp templates/task-spec-template.md my-task.md
+```powershell
+Copy-Item templates/task-spec-template.md my-task.md
 ```
 
 ### 2）做数据校验
 
 ```powershell
-python scripts/validate_round.py ^
-  --data cases/case01-nev-carbon/data/charging_piles_by_province.csv ^
-  --registry cases/case01-nev-carbon/data/source_registry.csv ^
-  --variable charging ^
-  --value-col public_charging_piles ^
+python scripts/validate_round.py `
+  --data cases/case01-nev-carbon/data/charging_piles_by_province.csv `
+  --registry cases/case01-nev-carbon/data/source_registry.csv `
+  --variable charging `
+  --value-col public_charging_piles `
   --check-unit 台
 ```
 
 ### 3）导出交付包
 
 ```powershell
-python scripts/export_evidence_pack.py ^
-  --data cases/case01-nev-carbon/data/charging_piles_by_province.csv ^
-  --registry cases/case01-nev-carbon/data/source_registry.csv ^
-  --variable charging ^
-  --value-col public_charging_piles ^
+python scripts/export_evidence_pack.py `
+  --data cases/case01-nev-carbon/data/charging_piles_by_province.csv `
+  --registry cases/case01-nev-carbon/data/source_registry.csv `
+  --variable charging `
+  --value-col public_charging_piles `
   --output-dir tmp/evidence-pack/case01-charging
 ```
 
 ### 4）运行评估
 
 ```powershell
-python scripts/run_benchmark_eval.py ^
-  --data cases/case01-nev-carbon/data/charging_piles_by_province.csv ^
-  --registry cases/case01-nev-carbon/data/source_registry.csv ^
-  --variable charging ^
-  --value-col public_charging_piles ^
-  --year-start 2017 ^
-  --year-end 2023 ^
-  --output-json tmp/benchmark/case01-charging.json ^
+python scripts/run_benchmark_eval.py `
+  --data cases/case01-nev-carbon/data/charging_piles_by_province.csv `
+  --registry cases/case01-nev-carbon/data/source_registry.csv `
+  --variable charging `
+  --value-col public_charging_piles `
+  --year-start 2017 `
+  --year-end 2023 `
+  --output-json tmp/benchmark/case01-charging.json `
   --output-md tmp/benchmark/case01-charging.md
 ```
 

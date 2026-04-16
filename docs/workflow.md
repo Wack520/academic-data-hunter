@@ -46,3 +46,10 @@ Academic Data Hunter 的核心不是单次搜索，而是一整条公开数据�
 ## 当前阶段说明
 
 当前仓库仍保留 `cases/` 目录作为示例资产；后续阶段再迁移为 `examples/`。
+
+## 相关文档
+
+- [来源策略](source-policy.md)
+- [校验说明](validation.md)
+- [Evidence Pack](evidence-pack.md)
+- [Benchmark Eval](benchmark-eval.md)
