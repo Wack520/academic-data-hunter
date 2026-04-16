@@ -4,7 +4,7 @@
 
 依赖：
 - 环境变量 CEADS_USERNAME / CEADS_PASSWORD
-- 复用 d:/Desk/app/math/ceads_download_and_extract.py 中的 login_ceads（含验证码OCR）
+- 如存在上级 `math` 项目，则复用其中的 `login_ceads`（含验证码 OCR）
 """
 
 from __future__ import annotations

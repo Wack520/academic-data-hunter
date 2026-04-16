@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-检查 Codex 配置中的 MCP 搜索服务器（如 tavily / exa）是否已配置。
+检查本地客户端配置中的 MCP 搜索服务器（如 tavily / exa）是否已配置。
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--config",
         default="",
-        help="Codex config.toml 路径（默认读取 CODEX_CONFIG 或 ~/.codex/config.toml）",
+        help="客户端 config.toml 路径（默认读取 CODEX_CONFIG 或 ~/.codex/config.toml）",
     )
     p.add_argument("--required", default="tavily-proxy,exa-proxy", help="必需服务器名，逗号分隔")
     return p.parse_args()

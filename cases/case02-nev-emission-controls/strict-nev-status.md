@@ -1,6 +1,6 @@
 # Case02 strict NEV 状态（2023）
 
-- 面板路径：`D:/Desk/app/academic-data-hunter/cases/case02-nev-emission-controls/data/panel_case02_strict_30prov_2012_2023.csv`
+- 面板路径：`cases/case02-nev-emission-controls/data/panel_case02_strict_30prov_2012_2023.csv`
 - 覆盖：**23/30**
 - 缺失省份（7）：吉林省、江西省、湖北省、福建省、辽宁省、青海省、黑龙江省
 

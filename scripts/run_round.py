@@ -1,5 +1,5 @@
 """
-生成“下一轮数据补缺任务”文档（供 Codex / 其他 Agent 直接执行）。
+生成“下一轮数据补缺任务”文档（供执行型 Agent 或人工继续处理）。
 
 示例：
 python scripts/run_round.py \

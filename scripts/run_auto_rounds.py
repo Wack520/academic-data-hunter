@@ -3,7 +3,7 @@
 
 说明：
 - 本脚本不绑定具体搜索引擎，Agent 执行通过 --agent-cmd 注入
-- 可与 Codex / Claude / GPT-Researcher / ScrapeGraphAI 组合使用
+- 可与不同 Agent 或搜索编排工具组合使用
 
 示例（Dry Run，仅生成任务并评估）：
 python scripts/run_auto_rounds.py ^

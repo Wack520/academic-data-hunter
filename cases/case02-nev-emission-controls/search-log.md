@@ -222,13 +222,13 @@
 ## 18) MCP 搜索层补充（2026-03-27）
 - 新增 MCP 自检脚本：
   - `scripts/check_mcp_servers.py`
-  - 用于检查 `~/.codex/config.toml` 中是否已配置 `tavily-proxy`、`exa-proxy`。
+  - 用于检查本地 MCP 客户端配置中是否已配置 `tavily-proxy`、`exa-proxy`。
 - 新增模板：
   - `templates/mcp-servers.example.toml`
 - 本机检查结果（当次）：`tavily-proxy` 已配置，`exa-proxy` 缺失（需按模板补充）。
 
 ## 19) 数据处理分层补充（2026-03-27）
-- 参考 ScrapeGraphAI 的处理思路，新增：
+- 按“发现-归档-抽取”分层处理思路，新增：
   - `scripts/process_web_data_pipeline.py`
   - `templates/extraction-schema-template.json`
 - 能力：
@@ -243,7 +243,7 @@
   - 新增参数：`--skip-processing`、`--process-mode`、`--process-schema-file`、`--process-max-urls` 等。
 
 ## 21) Planner 路由层补充（2026-03-27）
-- 借鉴 GPT-Researcher 的“先规划后执行”：
+- 采用“先规划后执行”的任务路由方式：
   - 新增 `scripts/plan_research_workflow.py`
   - 新增 `templates/research-spec-template.json`
 - 能力：

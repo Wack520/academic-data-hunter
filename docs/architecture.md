@@ -8,7 +8,7 @@
 flowchart TD
     A[任务输入<br/>task-spec / research-spec] --> B[plan_research_workflow.py]
     B --> C[run_round.py<br/>生成下一轮任务]
-    C --> D[Agent 执行层<br/>Codex / 其他 Agent]
+    C --> D[Agent 执行层<br/>执行型 Agent / MCP 客户端]
     D --> E[Case 数据文件更新<br/>cases/*/data/*.csv]
     E --> F[validate_round.py]
     F --> G[qc_checker.py]

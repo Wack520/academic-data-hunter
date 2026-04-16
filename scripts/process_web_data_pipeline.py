@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-通用网页数据处理管线（借鉴 ScrapeGraphAI 的“处理分层”思路）：
+通用网页数据处理管线（按“归档 + 抽取”分层组织）：
 1) markdown-like 内容归档（低成本、可审计）
 2) schema 规则抽取（结构化字段 + evidence）
 

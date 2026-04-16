@@ -1,8 +1,8 @@
-# 放到 ~/.codex/config.toml 的示例片段（按实际地址/凭证替换）
+# 放到 ~/.codex/config.toml 的示例片段（将 <PROJECT_ROOT> 替换为你的仓库绝对路径）
 
 [mcp_servers.academic-data-hunter]
 command = "python"
-args = ["D:/Desk/academic-data-hunter/scripts/mcp_server.py"]
+args = ["<PROJECT_ROOT>/scripts/mcp_server.py"]
 
 [mcp_servers.tavily-proxy]
 command = "npx"

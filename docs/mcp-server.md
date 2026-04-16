@@ -28,17 +28,17 @@ The server speaks line-delimited JSON-RPC over stdio and supports:
 - `shutdown`
 - `exit`
 
-## Codex config example
+## 本地客户端配置示例（以 Codex 为例）
 
-Add this to your local `~/.codex/config.toml`:
+把下面片段加入本地 `~/.codex/config.toml`：
 
 ```toml
 [mcp_servers.academic-data-hunter]
 command = "python"
-args = ["D:/Desk/academic-data-hunter/scripts/mcp_server.py"]
+args = ["<PROJECT_ROOT>/scripts/mcp_server.py"]
 ```
 
-Then your client can call the project tools directly through MCP.
+把 `<PROJECT_ROOT>` 替换成你的仓库绝对路径后，即可通过 MCP 直接调用项目工具。
 
 ## Example tool call target
 

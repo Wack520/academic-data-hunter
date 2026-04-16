@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Planner：将变量清单自动路由到执行链路（借鉴 GPT-Researcher 的 planner 思路）。
+Planner：将变量清单自动路由到标准执行链路。
 
 输入：research spec JSON
 输出：plan JSON + Markdown（四阶段：Planner/Executor/Extractor/Validator）
